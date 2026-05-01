@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2026.1.3),
-    on April 25, 2026, at 15:25
+    on April 30, 2026, at 18:05
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -281,7 +281,7 @@ def setupData(expInfo, dataDir=None):
     thisExp = data.ExperimentHandler(
         name=expName, version=expVersion,
         extraInfo=expInfo, runtimeInfo=None,
-        originPath='C:\\Users\\Maik Bieleke\\My Drive\\Labor\\temp\\experiments\\experiment-1\\maxForce.py',
+        originPath='C:\\Users\\Maik Bieleke\\My Drive\\Labor\\dfg-dynamind\\experiment-1\\maxForce.py',
         savePickle=True, saveWideText=True,
         dataFileName=dataDir + os.sep + filename, sortColumns='time'
     )
@@ -368,7 +368,7 @@ def setupWindow(expInfo=None, win=None):
     if expInfo is not None:
         # get/measure frame rate if not already in expInfo
         if win._monitorFrameRate is None:
-            win._monitorFrameRate = win.getActualFrameRate(infoMsg='Experiment wird geladen...')
+            win._monitorFrameRate = win.getActualFrameRate(infoMsg='Experiment wird vorbereitet...')
         expInfo['frameRate'] = win._monitorFrameRate
     win.hideMessage()
     if PILOTING:
@@ -537,12 +537,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # --- Initialize components for Routine "rr_setup" ---
     # Run 'Begin Experiment' code from setup_constants
     # DEFINITIONS AND CONSTANTS ----
-    NUM_MVC      = 3  # How many MVC trials to conduct
-    NUM_DOMAINS  = 0 #1  # How often each domain is repeated
-    NUM_BLOCKS   = 3  # How often each block within the domain is repeated
-    NUM_LEVELS   = 6  # How often each level within the block is repeated
-    NUM_PALETTES = 24 # How many palettes are generated per trial
-    NUM_TARGETS  = 4  # How many targets appear in NUM_PALETTES palettes
+    NUM_MVC         = 3  # How many MVC trials to conduct
+    NUM_BLOCKS      = 3  # How often each block within the domain is repeated
+    NUM_LEVELS      = 4  # How often each level within the block is repeated
+    NUM_PALETTES    = 10 # How many palettes are generated per trial
+    NUM_TARGETS     = 4  # How many targets appear in NUM_PALETTES palettes
     NUM_DISTRACTORS = 8
     
     # MIN, MAX, AND RANGE OF COGNITIVE AND PHYSICAL DEMAND
@@ -550,8 +549,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     PHYSICAL_DEMAND_MAX     = 0.40
     COGNITIVE_DEMAND_MIN    = 10
     COGNITIVE_DEMAND_MAX    = 60
-    PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, 4), 2).tolist()
-    COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, 4), 2).tolist()
+    PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()
+    COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()
+    
+    TOLERANCE = 15.0
     
     # TARGET COLORS ----
     TARGET_COLORS_RGB255 = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
@@ -721,10 +722,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         "is_false_alarm":           None,
                         "is_miss":                  None,
                         "is_correct_rejection":     None,
-                        "total_hits":               None,
-                        "total_false_alarms":       None,
-                        "total_misses":             None,
-                        "total_correct_rejections": None,
+                        "hits":                     None,
+                        "false_alarms":             None,
+                        "misses":                   None,
+                        "correct_rejections":       None,
                         "d_prime":                  None
                     })
     
@@ -766,20 +767,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Run 'Begin Experiment' code from setup_ring
     # Main ring parameters
     ring_radius = 0.075  # distance of small circles from center
-    hole_radius = 0.02  # size of each small circle
+    hole_radius = 0.02   # size of each small circle
     
     # Create the 8 hole stimuli
     hole_stimuli = []
     ring_center = (0.5, 0.0)
     for i in range(NUM_DISTRACTORS):
-        angle = 2 * np.pi * i / NUM_DISTRACTORS
+        angle = np.pi - 2 * np.pi * i / NUM_DISTRACTORS
         x = ring_center[0] + ring_radius * np.cos(angle)
         y = ring_center[1] + ring_radius * np.sin(angle)
         circle = visual.Circle(
             win,
             radius=hole_radius,
             pos=(x, y),
-            fillColor=[128, 128, 128],  # default gray, update per trial
+            fillColor=[128, 128, 128],
             colorSpace='rgb255',
             lineColor=None,
         )
@@ -788,7 +789,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Create the labels
     hole_labels = []
     for i in range(NUM_DISTRACTORS):
-        angle = 2 * np.pi * i / NUM_DISTRACTORS
+        angle = np.pi - 2 * np.pi * i / NUM_DISTRACTORS
         x = ring_center[0] + ring_radius * np.cos(angle)
         y = ring_center[1] + ring_radius * np.sin(angle)
         label = visual.TextStim(
@@ -800,6 +801,43 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             bold=True,
         )
         hole_labels.append(label)
+    
+    # --- Initialize components for Routine "rr_start" ---
+    start_text = visual.TextStim(win=win, name='start_text',
+        text='Fertig - es kann losgehen!',
+        font='Arial',
+        pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=0.0);
+    start_button = visual.ButtonStim(win, 
+        text='START', font='Arvo',
+        pos=(0, -0.2),
+        letterHeight=0.05,
+        size=(0.25, 0.1), 
+        ori=0.0
+        ,borderWidth=0.0,
+        fillColor=(-1.0000, -0.2157, -1.0000), borderColor=None,
+        color='white', colorSpace='rgb',
+        opacity=None,
+        bold=True, italic=False,
+        padding=None,
+        anchor='center',
+        name='start_button',
+        depth=-1
+    )
+    start_button.buttonClock = core.Clock()
+    
+    # --- Initialize components for Routine "rr_countdown" ---
+    
+    countdown_lights = Apparatus('apparatus')
+    countdown_display = visual.TextStim(win=win, name='countdown_display',
+        text='',
+        font='Arial',
+        pos=(0, 0), draggable=False, height=0.15, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-2.0);
     
     # --- Initialize components for Routine "rr_maxforce" ---
     # Run 'Begin Experiment' code from maxforce_code
@@ -829,7 +867,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         text='Weiter', font='Arvo',
         pos=(0, -0.3),
         letterHeight=0.05,
-        size=(0.25, 0.15), 
+        size=(0.25, 0.1), 
         ori=0.0
         ,borderWidth=0.0,
         fillColor=(-1.0000, -0.2157, -1.0000), borderColor=None,
@@ -843,6 +881,17 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     )
     mvc_continue.buttonClock = core.Clock()
     
+    # --- Initialize components for Routine "rr_countdown" ---
+    
+    countdown_lights = Apparatus('apparatus')
+    countdown_display = visual.TextStim(win=win, name='countdown_display',
+        text='',
+        font='Arial',
+        pos=(0, 0), draggable=False, height=0.15, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-2.0);
+    
     # --- Initialize components for Routine "rr_target" ---
     
     target_lights = Apparatus(None)
@@ -851,7 +900,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     target_display = visual.TextStim(win=win, name='target_display',
         text='',
         font='Courier New',
-        pos=(0, 0), draggable=False, height=0.04, wrapWidth=None, ori=0.0, 
+        pos=(0, 0), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-3.0);
@@ -866,7 +915,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     trial_display = visual.TextStim(win=win, name='trial_display',
         text='',
         font='Courier New',
-        pos=(0, 0), draggable=False, height=0.04, wrapWidth=None, ori=0.0, 
+        pos=(0, 0), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-4.0);
@@ -875,8 +924,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     feedback_keyboard = keyboard.Keyboard(deviceName='defaultKeyboard')
     feedback_display = visual.TextStim(win=win, name='feedback_display',
         text='',
-        font='Arial',
-        pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
+        font='Courier New',
+        pos=(0, 0), draggable=False, height=0.04, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-2.0);
@@ -1014,10 +1063,162 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # the Routine "rr_setup" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset()
     
+    # --- Prepare to start Routine "rr_start" ---
+    # create an object to store info about Routine rr_start
+    rr_start = data.Routine(
+        name='rr_start',
+        components=[start_text, start_button],
+    )
+    rr_start.status = NOT_STARTED
+    continueRoutine = True
+    # update component parameters for each repeat
+    # reset start_button to account for continued clicks & clear times on/off
+    start_button.reset()
+    # store start times for rr_start
+    rr_start.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+    rr_start.tStart = globalClock.getTime(format='float')
+    rr_start.status = STARTED
+    thisExp.addData('rr_start.started', rr_start.tStart)
+    rr_start.maxDuration = None
+    # keep track of which components have finished
+    rr_startComponents = rr_start.components
+    for thisComponent in rr_start.components:
+        thisComponent.tStart = None
+        thisComponent.tStop = None
+        thisComponent.tStartRefresh = None
+        thisComponent.tStopRefresh = None
+        if hasattr(thisComponent, 'status'):
+            thisComponent.status = NOT_STARTED
+    # reset timers
+    t = 0
+    _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+    frameN = -1
+    
+    # --- Run Routine "rr_start" ---
+    thisExp.currentRoutine = rr_start
+    rr_start.forceEnded = routineForceEnded = not continueRoutine
+    while continueRoutine:
+        # get current time
+        t = routineTimer.getTime()
+        tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+        tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+        frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+        # update/draw components on each frame
+        
+        # *start_text* updates
+        
+        # if start_text is starting this frame...
+        if start_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+            # keep track of start time/frame for later
+            start_text.frameNStart = frameN  # exact frame index
+            start_text.tStart = t  # local t and not account for scr refresh
+            start_text.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(start_text, 'tStartRefresh')  # time at next scr refresh
+            # add timestamp to datafile
+            thisExp.timestampOnFlip(win, 'start_text.started')
+            # update status
+            start_text.status = STARTED
+            start_text.setAutoDraw(True)
+        
+        # if start_text is active this frame...
+        if start_text.status == STARTED:
+            # update params
+            pass
+        # *start_button* updates
+        
+        # if start_button is starting this frame...
+        if start_button.status == NOT_STARTED and tThisFlip >= 0-frameTolerance:
+            # keep track of start time/frame for later
+            start_button.frameNStart = frameN  # exact frame index
+            start_button.tStart = t  # local t and not account for scr refresh
+            start_button.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(start_button, 'tStartRefresh')  # time at next scr refresh
+            # add timestamp to datafile
+            thisExp.timestampOnFlip(win, 'start_button.started')
+            # update status
+            start_button.status = STARTED
+            win.callOnFlip(start_button.buttonClock.reset)
+            start_button.setAutoDraw(True)
+        
+        # if start_button is active this frame...
+        if start_button.status == STARTED:
+            # update params
+            pass
+            # check whether start_button has been pressed
+            if start_button.isClicked:
+                if not start_button.wasClicked:
+                    # if this is a new click, store time of first click and clicked until
+                    start_button.timesOn.append(start_button.buttonClock.getTime())
+                    start_button.timesOff.append(start_button.buttonClock.getTime())
+                elif len(start_button.timesOff):
+                    # if click is continuing from last frame, update time of clicked until
+                    start_button.timesOff[-1] = start_button.buttonClock.getTime()
+                if not start_button.wasClicked:
+                    # end routine when start_button is clicked
+                    continueRoutine = False
+                if not start_button.wasClicked:
+                    # run callback code when start_button is clicked
+                    pass
+        # take note of whether start_button was clicked, so that next frame we know if clicks are new
+        start_button.wasClicked = start_button.isClicked and start_button.status == STARTED
+        
+        # check for quit (typically the Esc key)
+        if defaultKeyboard.getKeys(keyList=["escape"]):
+            thisExp.status = FINISHED
+        if thisExp.status == FINISHED or endExpNow:
+            endExperiment(thisExp, win=win)
+            return
+        # pause experiment here if requested
+        if thisExp.status == PAUSED:
+            pauseExperiment(
+                thisExp=thisExp, 
+                win=win, 
+                timers=[routineTimer, globalClock], 
+                currentRoutine=rr_start,
+            )
+            # skip the frame we paused on
+            continue
+        
+        # has a Component requested the Routine to end?
+        if not continueRoutine:
+            rr_start.forceEnded = routineForceEnded = True
+        # has the Routine been forcibly ended?
+        if rr_start.forceEnded or routineForceEnded:
+            break
+        # has every Component finished?
+        continueRoutine = False
+        for thisComponent in rr_start.components:
+            if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                continueRoutine = True
+                break  # at least one component has not yet finished
+        
+        # refresh the screen
+        if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+            win.flip()
+    
+    # --- Ending Routine "rr_start" ---
+    for thisComponent in rr_start.components:
+        if hasattr(thisComponent, "setAutoDraw"):
+            thisComponent.setAutoDraw(False)
+    # store stop times for rr_start
+    rr_start.tStop = globalClock.getTime(format='float')
+    rr_start.tStopRefresh = tThisFlipGlobal
+    thisExp.addData('rr_start.stopped', rr_start.tStop)
+    thisExp.addData('start_button.numClicks', start_button.numClicks)
+    if start_button.numClicks:
+       thisExp.addData('start_button.timesOn', start_button.timesOn)
+       thisExp.addData('start_button.timesOff', start_button.timesOff)
+    else:
+       thisExp.addData('start_button.timesOn', "")
+       thisExp.addData('start_button.timesOff', "")
+    thisExp.nextEntry()
+    # the Routine "rr_start" was not non-slip safe, so reset the non-slip timer
+    routineTimer.reset()
+    
     # set up handler to look after randomisation of conditions etc
     oo_mvc_type = data.TrialHandler2(
         name='oo_mvc_type',
-        nReps=1.0, 
+        nReps=0.0, 
         method='sequential', 
         extraInfo=expInfo, 
         originPath=-1, 
@@ -1083,6 +1284,172 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             if thisOo_mvc_rep != None:
                 for paramName in thisOo_mvc_rep:
                     globals()[paramName] = thisOo_mvc_rep[paramName]
+            
+            # --- Prepare to start Routine "rr_countdown" ---
+            # create an object to store info about Routine rr_countdown
+            rr_countdown = data.Routine(
+                name='rr_countdown',
+                components=[countdown_lights, countdown_display],
+            )
+            rr_countdown.status = NOT_STARTED
+            continueRoutine = True
+            # update component parameters for each repeat
+            # Run 'Begin Routine' code from countdown_code
+            # Countdown setup
+            cur_countdown_idx = len(INNER_HOLES)
+            cur_countdown_last_update_sec = None
+            
+            # DEBUG
+            countdown_lights.turnOffLights("all")
+            # store start times for rr_countdown
+            rr_countdown.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+            rr_countdown.tStart = globalClock.getTime(format='float')
+            rr_countdown.status = STARTED
+            thisExp.addData('rr_countdown.started', rr_countdown.tStart)
+            rr_countdown.maxDuration = None
+            # keep track of which components have finished
+            rr_countdownComponents = rr_countdown.components
+            for thisComponent in rr_countdown.components:
+                thisComponent.tStart = None
+                thisComponent.tStop = None
+                thisComponent.tStartRefresh = None
+                thisComponent.tStopRefresh = None
+                if hasattr(thisComponent, 'status'):
+                    thisComponent.status = NOT_STARTED
+            # reset timers
+            t = 0
+            _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+            frameN = -1
+            
+            # --- Run Routine "rr_countdown" ---
+            thisExp.currentRoutine = rr_countdown
+            rr_countdown.forceEnded = routineForceEnded = not continueRoutine
+            while continueRoutine:
+                # if trial has changed, end Routine now
+                if hasattr(thisOo_mvc_rep, 'status') and thisOo_mvc_rep.status == STOPPING:
+                    continueRoutine = False
+                # get current time
+                t = routineTimer.getTime()
+                tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+                tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+                frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+                # update/draw components on each frame
+                # Run 'Each Frame' code from countdown_code
+                # Check if it's time to update the countdown
+                if cur_countdown_last_update_sec is None:
+                    cur_countdown_last_update_sec = t  # t is the routine timer
+                
+                if t - cur_countdown_last_update_sec >= COUNTDOWN_STEP_SEC:
+                    if cur_countdown_idx >= 0:
+                        # Turn off the current light
+                        countdown_lights.turnOffLights(cur_countdown_idx)
+                    else:
+                        continueRoutine = False
+                    
+                    # Decrease the number of active lights
+                    cur_countdown_idx -= 1
+                    cur_countdown_last_update_sec = t
+                
+                # if countdown_lights is starting this frame...
+                if countdown_lights.status == NOT_STARTED and t >= 0-frameTolerance:
+                    # keep track of start time/frame for later
+                    countdown_lights.frameNStart = frameN  # exact frame index
+                    countdown_lights.tStart = t  # local t and not account for scr refresh
+                    countdown_lights.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(countdown_lights, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.addData('countdown_lights.started', t)
+                    # update status
+                    countdown_lights.status = STARTED
+                    countdown_lights.setLights("inner", 'white')
+                
+                # if countdown_lights is active this frame...
+                if countdown_lights.status == STARTED:
+                    # update params
+                    pass
+                    
+                
+                # if countdown_lights is stopping this frame...
+                if countdown_lights.status == STARTED:
+                    # is it time to stop? (based on global clock, using actual start)
+                    if tThisFlipGlobal > countdown_lights.tStartRefresh + 4-frameTolerance:
+                        # keep track of stop time/frame for later
+                        countdown_lights.tStop = t  # not accounting for scr refresh
+                        countdown_lights.tStopRefresh = tThisFlipGlobal  # on global time
+                        countdown_lights.frameNStop = frameN  # exact frame index
+                        # add timestamp to datafile
+                        thisExp.addData('countdown_lights.stopped', t)
+                        # update status
+                        countdown_lights.status = FINISHED
+                        if False:
+                           countdown_lights.turnOffLights("inner")
+                
+                # *countdown_display* updates
+                
+                # if countdown_display is starting this frame...
+                if countdown_display.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # keep track of start time/frame for later
+                    countdown_display.frameNStart = frameN  # exact frame index
+                    countdown_display.tStart = t  # local t and not account for scr refresh
+                    countdown_display.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(countdown_display, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'countdown_display.started')
+                    # update status
+                    countdown_display.status = STARTED
+                    countdown_display.setAutoDraw(True)
+                
+                # if countdown_display is active this frame...
+                if countdown_display.status == STARTED:
+                    # update params
+                    countdown_display.setText(cur_countdown_idx + 1, log=False)
+                
+                # check for quit (typically the Esc key)
+                if defaultKeyboard.getKeys(keyList=["escape"]):
+                    thisExp.status = FINISHED
+                if thisExp.status == FINISHED or endExpNow:
+                    endExperiment(thisExp, win=win)
+                    return
+                # pause experiment here if requested
+                if thisExp.status == PAUSED:
+                    pauseExperiment(
+                        thisExp=thisExp, 
+                        win=win, 
+                        timers=[routineTimer, globalClock], 
+                        currentRoutine=rr_countdown,
+                    )
+                    # skip the frame we paused on
+                    continue
+                
+                # has a Component requested the Routine to end?
+                if not continueRoutine:
+                    rr_countdown.forceEnded = routineForceEnded = True
+                # has the Routine been forcibly ended?
+                if rr_countdown.forceEnded or routineForceEnded:
+                    break
+                # has every Component finished?
+                continueRoutine = False
+                for thisComponent in rr_countdown.components:
+                    if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                        continueRoutine = True
+                        break  # at least one component has not yet finished
+                
+                # refresh the screen
+                if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+                    win.flip()
+            
+            # --- Ending Routine "rr_countdown" ---
+            for thisComponent in rr_countdown.components:
+                if hasattr(thisComponent, "setAutoDraw"):
+                    thisComponent.setAutoDraw(False)
+            # store stop times for rr_countdown
+            rr_countdown.tStop = globalClock.getTime(format='float')
+            rr_countdown.tStopRefresh = tThisFlipGlobal
+            thisExp.addData('rr_countdown.stopped', rr_countdown.tStop)
+            if False:
+                countdown_lights.turnOffLights("inner")
+            # the Routine "rr_countdown" was not non-slip safe, so reset the non-slip timer
+            routineTimer.reset()
             
             # --- Prepare to start Routine "rr_maxforce" ---
             # create an object to store info about Routine rr_maxforce
@@ -1534,7 +1901,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             oo_mvc_type.status = STARTED
         thisExp.nextEntry()
         
-    # completed 1.0 repeats of 'oo_mvc_type'
+    # completed 0.0 repeats of 'oo_mvc_type'
     oo_mvc_type.status = FINISHED
     
     if thisSession is not None:
@@ -1576,14 +1943,180 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             for paramName in thisOo_block:
                 globals()[paramName] = thisOo_block[paramName]
         
+        # --- Prepare to start Routine "rr_countdown" ---
+        # create an object to store info about Routine rr_countdown
+        rr_countdown = data.Routine(
+            name='rr_countdown',
+            components=[countdown_lights, countdown_display],
+        )
+        rr_countdown.status = NOT_STARTED
+        continueRoutine = True
+        # update component parameters for each repeat
+        # Run 'Begin Routine' code from countdown_code
+        # Countdown setup
+        cur_countdown_idx = len(INNER_HOLES)
+        cur_countdown_last_update_sec = None
+        
+        # DEBUG
+        countdown_lights.turnOffLights("all")
+        # store start times for rr_countdown
+        rr_countdown.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+        rr_countdown.tStart = globalClock.getTime(format='float')
+        rr_countdown.status = STARTED
+        thisExp.addData('rr_countdown.started', rr_countdown.tStart)
+        rr_countdown.maxDuration = None
+        # keep track of which components have finished
+        rr_countdownComponents = rr_countdown.components
+        for thisComponent in rr_countdown.components:
+            thisComponent.tStart = None
+            thisComponent.tStop = None
+            thisComponent.tStartRefresh = None
+            thisComponent.tStopRefresh = None
+            if hasattr(thisComponent, 'status'):
+                thisComponent.status = NOT_STARTED
+        # reset timers
+        t = 0
+        _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+        frameN = -1
+        
+        # --- Run Routine "rr_countdown" ---
+        thisExp.currentRoutine = rr_countdown
+        rr_countdown.forceEnded = routineForceEnded = not continueRoutine
+        while continueRoutine:
+            # if trial has changed, end Routine now
+            if hasattr(thisOo_block, 'status') and thisOo_block.status == STOPPING:
+                continueRoutine = False
+            # get current time
+            t = routineTimer.getTime()
+            tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+            tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+            frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+            # update/draw components on each frame
+            # Run 'Each Frame' code from countdown_code
+            # Check if it's time to update the countdown
+            if cur_countdown_last_update_sec is None:
+                cur_countdown_last_update_sec = t  # t is the routine timer
+            
+            if t - cur_countdown_last_update_sec >= COUNTDOWN_STEP_SEC:
+                if cur_countdown_idx >= 0:
+                    # Turn off the current light
+                    countdown_lights.turnOffLights(cur_countdown_idx)
+                else:
+                    continueRoutine = False
+                
+                # Decrease the number of active lights
+                cur_countdown_idx -= 1
+                cur_countdown_last_update_sec = t
+            
+            # if countdown_lights is starting this frame...
+            if countdown_lights.status == NOT_STARTED and t >= 0-frameTolerance:
+                # keep track of start time/frame for later
+                countdown_lights.frameNStart = frameN  # exact frame index
+                countdown_lights.tStart = t  # local t and not account for scr refresh
+                countdown_lights.tStartRefresh = tThisFlipGlobal  # on global time
+                win.timeOnFlip(countdown_lights, 'tStartRefresh')  # time at next scr refresh
+                # add timestamp to datafile
+                thisExp.addData('countdown_lights.started', t)
+                # update status
+                countdown_lights.status = STARTED
+                countdown_lights.setLights("inner", 'white')
+            
+            # if countdown_lights is active this frame...
+            if countdown_lights.status == STARTED:
+                # update params
+                pass
+                
+            
+            # if countdown_lights is stopping this frame...
+            if countdown_lights.status == STARTED:
+                # is it time to stop? (based on global clock, using actual start)
+                if tThisFlipGlobal > countdown_lights.tStartRefresh + 4-frameTolerance:
+                    # keep track of stop time/frame for later
+                    countdown_lights.tStop = t  # not accounting for scr refresh
+                    countdown_lights.tStopRefresh = tThisFlipGlobal  # on global time
+                    countdown_lights.frameNStop = frameN  # exact frame index
+                    # add timestamp to datafile
+                    thisExp.addData('countdown_lights.stopped', t)
+                    # update status
+                    countdown_lights.status = FINISHED
+                    if False:
+                       countdown_lights.turnOffLights("inner")
+            
+            # *countdown_display* updates
+            
+            # if countdown_display is starting this frame...
+            if countdown_display.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                # keep track of start time/frame for later
+                countdown_display.frameNStart = frameN  # exact frame index
+                countdown_display.tStart = t  # local t and not account for scr refresh
+                countdown_display.tStartRefresh = tThisFlipGlobal  # on global time
+                win.timeOnFlip(countdown_display, 'tStartRefresh')  # time at next scr refresh
+                # add timestamp to datafile
+                thisExp.timestampOnFlip(win, 'countdown_display.started')
+                # update status
+                countdown_display.status = STARTED
+                countdown_display.setAutoDraw(True)
+            
+            # if countdown_display is active this frame...
+            if countdown_display.status == STARTED:
+                # update params
+                countdown_display.setText(cur_countdown_idx + 1, log=False)
+            
+            # check for quit (typically the Esc key)
+            if defaultKeyboard.getKeys(keyList=["escape"]):
+                thisExp.status = FINISHED
+            if thisExp.status == FINISHED or endExpNow:
+                endExperiment(thisExp, win=win)
+                return
+            # pause experiment here if requested
+            if thisExp.status == PAUSED:
+                pauseExperiment(
+                    thisExp=thisExp, 
+                    win=win, 
+                    timers=[routineTimer, globalClock], 
+                    currentRoutine=rr_countdown,
+                )
+                # skip the frame we paused on
+                continue
+            
+            # has a Component requested the Routine to end?
+            if not continueRoutine:
+                rr_countdown.forceEnded = routineForceEnded = True
+            # has the Routine been forcibly ended?
+            if rr_countdown.forceEnded or routineForceEnded:
+                break
+            # has every Component finished?
+            continueRoutine = False
+            for thisComponent in rr_countdown.components:
+                if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                    continueRoutine = True
+                    break  # at least one component has not yet finished
+            
+            # refresh the screen
+            if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+                win.flip()
+        
+        # --- Ending Routine "rr_countdown" ---
+        for thisComponent in rr_countdown.components:
+            if hasattr(thisComponent, "setAutoDraw"):
+                thisComponent.setAutoDraw(False)
+        # store stop times for rr_countdown
+        rr_countdown.tStop = globalClock.getTime(format='float')
+        rr_countdown.tStopRefresh = tThisFlipGlobal
+        thisExp.addData('rr_countdown.stopped', rr_countdown.tStop)
+        if False:
+            countdown_lights.turnOffLights("inner")
+        # the Routine "rr_countdown" was not non-slip safe, so reset the non-slip timer
+        routineTimer.reset()
+        
         # set up handler to look after randomisation of conditions etc
         oo_level = data.TrialHandler2(
             name='oo_level',
-            nReps=NUM_LEVELS, 
+            nReps=NUM_LEVELS*NUM_LEVELS, 
             method='random', 
             extraInfo=expInfo, 
             originPath=-1, 
-            trialList=data.importConditions('oo_level.xlsx'), 
+            trialList=[None], 
             seed=None, 
             isTrials=True, 
         )
@@ -1624,6 +2157,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # ===== CONDITION SETUP =====
             
             # Get data for current block and trial
+            print("oo_block.thisN: ", oo_block.thisN)
+            print("oo_level.thisN: ", oo_level.thisN)
             cur_physical_demand_level  = blocks[oo_block.thisN][oo_level.thisN]['physical_demand_level']
             cur_cognitive_demand_level = blocks[oo_block.thisN][oo_level.thisN]['cognitive_demand_level']
             cur_target_color_rgb255    = blocks[oo_block.thisN][oo_level.thisN]['target_color_rgb255']
@@ -1641,11 +2176,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 _target_freq = FREQ_LOW
             
             targetForce     = cur_physical_demand_level * mvc
-            tolerance       = 15.0
-            lower_threshold = targetForce - tolerance
-            upper_threshold = targetForce + tolerance
-            approach_margin = 10.0  # range before threshold where beeping starts
+            lower_threshold = max(targetForce - TOLERANCE, 0)
+            upper_threshold = targetForce + TOLERANCE
             
+            toneState    = 0
+            _lastSwitchT = -1e9
             _last_beep_t = -1e9  # tracks last beep time
             
             
@@ -1658,6 +2193,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Color the display circle
             for i, circle in enumerate(hole_stimuli):
                 circle.fillColor = cur_target_color_rgb255
+            
+            # ===== DATA DUMPING =====
+            pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)
             # store start times for rr_target
             rr_target.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
             rr_target.tStart = globalClock.getTime(format='float')
@@ -1719,14 +2257,26 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     print("Force is None!")
                 
                 # Create the target display text
-                deviation_symbol = "???" if target_force.whiteForce is None else "---" if target_force.whiteForce < lower_threshold else "+++" if target_force.whiteForce > upper_threshold else "ooo"
+                if target_force.whiteForce > upper_threshold:
+                    deviation_symbol = "\u2191\u2191\u2191"  # ↑
+                elif target_force.whiteForce < lower_threshold:
+                    deviation_symbol = "\u2193\u2193\u2193"  # ↓
+                else:
+                    deviation_symbol = "\u2013\u2013\u2013"  # – (on target)
+                
                 target_display_text = (
-                    f"============ TRIAL INFO ============\n"
-                    f"Color:             {cur_target_color_name}\n"
-                    f"Force:             {target_force.whiteForce:.0f} N\n"
-                    f"Deviation:         {deviation_symbol}\n"
-                    f"Time:              {round(3 - t)} s\n"
-                    f"====================================\n"
+                    f"============ TRIAL INFO ================\n"
+                    f"BLOCK {oo_block.thisN+1:2}/{NUM_BLOCKS} | TRIAL {oo_level.thisN+1:2}/{NUM_LEVELS ** 2}\n"
+                    f"----------------------------------------\n"
+                    f"Target Color:      {cur_target_color_name}\n"
+                    f"Physical demand:   {cur_physical_demand_level}\n"
+                    f"Cognitive demand:  {cur_cognitive_demand_level}\n"
+                    f"----------------------------------------\n"
+                    f"MVC:               {mvc:03.0f} N\n"
+                    f"Target:            {lower_threshold:03.0f} N | {targetForce:03.0f} N | {upper_threshold:03.0f} N\n"
+                    f"Force:                     {target_force.whiteForce:03.0f} N\n"
+                    f"Deviation:                 {deviation_symbol}\n"
+                    f"========================================\n"
                 )
                 
                 # Display monitoring circle
@@ -1987,11 +2537,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     _target_freq = FREQ_LOW
                 
                 targetForce     = cur_physical_demand_level * mvc
-                tolerance       = 15.0
-                lower_threshold = targetForce - tolerance
-                upper_threshold = targetForce + tolerance
-                approach_margin = 10.0  # range before threshold where beeping starts
+                lower_threshold = max(targetForce - TOLERANCE, 0)
+                upper_threshold = targetForce + TOLERANCE
                 
+                toneState    = 0
+                _lastSwitchT = -1e9
                 _last_beep_t = -1e9  # tracks last beep time
                 
                 
@@ -2040,10 +2590,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # =============================================================================
                     # AUDIO - EACH FRAME
                     # =============================================================================
-                    if target_force.whiteForce is not None:
-                        if target_force.whiteForce > upper_threshold:
+                    if trial_force.whiteForce is not None:
+                        if trial_force.whiteForce > upper_threshold:
                             proposed = 2
-                        elif target_force.whiteForce < lower_threshold:
+                        elif trial_force.whiteForce < lower_threshold:
                             proposed = 1
                         else:
                             proposed = 0
@@ -2065,14 +2615,26 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     
                     
                     # ===== DISPLAY SETUP =====
-                    deviation_symbol = "???" if trial_force.whiteForce is None else "---" if trial_force.whiteForce < lower_threshold else "+++" if trial_force.whiteForce > upper_threshold else "ooo"
+                    if trial_force.whiteForce > upper_threshold:
+                        deviation_symbol = "\u2191\u2191\u2191"  # ↑
+                    elif trial_force.whiteForce < lower_threshold:
+                        deviation_symbol = "\u2193\u2193\u2193"  # ↓
+                    else:
+                        deviation_symbol = "\u2013\u2013\u2013"  # – (on target)
                     
                     trial_display_text = (
-                        f"============ TRIAL INFO ============\n"
-                        f"Color:             {cur_target_color_name}\n"
-                        f"Force:             {trial_force.whiteForce:.0f} N\n"
-                        f"Deviation:         {deviation_symbol}\n"
-                        f"====================================\n"
+                        f"============ TRIAL INFO ================\n"
+                        f"BLOCK {oo_block.thisN+1:2}/{NUM_BLOCKS} | TRIAL {oo_level.thisN+1:2}/{NUM_LEVELS ** 2} | PALETTE {oo_palette.thisN+1:2}/{NUM_PALETTES}\n"
+                        f"----------------------------------------\n"
+                        f"Target Color:      {cur_target_color_name}\n"
+                        f"Physical demand:   {cur_physical_demand_level}\n"
+                        f"Cognitive demand:  {cur_cognitive_demand_level}\n"
+                        f"----------------------------------------\n"
+                        f"MVC:               {mvc:03.0f} N\n"
+                        f"Target:            {lower_threshold:03.0f} N | {targetForce:03.0f} N | {upper_threshold:03.0f} N\n"
+                        f"Force:                     {trial_force.whiteForce:03.0f} N\n"
+                        f"Deviation:                 {deviation_symbol}\n"
+                        f"========================================\n"
                     )
                     
                     for circle, label in zip(hole_stimuli, hole_labels):
@@ -2130,7 +2692,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             thisExp.addData('trial_reed.stopped', t)
                             # update status
                             trial_reed.status = FINISHED
-                            trial_reed.stopReedMeasurement()
+                            if trial_reed._reed_measuring:   trial_reed.stopReedMeasurement()
                     
                     # if trial_lights is starting this frame...
                     if trial_lights.status == NOT_STARTED and t >= 0.0-frameTolerance:
@@ -2271,6 +2833,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 for thisComponent in rr_trial.components:
                     if hasattr(thisComponent, "setAutoDraw"):
                         thisComponent.setAutoDraw(False)
+                # store stop times for rr_trial
+                rr_trial.tStop = globalClock.getTime(format='float')
+                rr_trial.tStopRefresh = tThisFlipGlobal
+                thisExp.addData('rr_trial.stopped', rr_trial.tStop)
                 # Run 'End Routine' code from trial_color_code
                 # Determine d-prime metrics
                 is_hit               = int(cur_palette_has_target and cur_palette_target_hole in trial_reed.reedHoles)
@@ -2287,6 +2853,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # Get the first insertion event (action == 1) across all reed events
                 first_insert_idx = next((h for h, a in zip(trial_reed.reedHoles, trial_reed.reedActions) if a == 1), None)
                 first_insert_rt  = next((t for t, a in zip(trial_reed.reedTimes,  trial_reed.reedActions) if a == 1), None)
+                print("first_insert_rt: ", first_insert_rt)
+                print("trial_reed.started: ", trial_reed.started)
                 
                 # Write hole-level data: mark which hole was first selected and its RT
                 for hole_idx in range(NUM_DISTRACTORS):
@@ -2294,31 +2862,13 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     rows[i]["is_selected"] = int(hole_idx == first_insert_idx)
                     rows[i]["selected_rt"] = first_insert_rt if hole_idx == first_insert_idx else None
                 
-                first_insert_rt = next((t for t, a in zip(trial_reed.reedTimes, trial_reed.reedActions) if a == 1), None)
-                rows[i]["selected_rt"] = first_insert_rt
-                
                 # Write palette-level data
                 for i in palette_row_index[(oo_block.thisN, oo_level.thisN, oo_palette.thisN)]:
                     rows[i]["is_hit"]               = is_hit
                     rows[i]["is_false_alarm"]       = is_false_alarm
                     rows[i]["is_miss"]              = is_miss
                     rows[i]["is_correct_rejection"] = is_correct_rejection
-                
-                #Daten anhängen
-                # paletteResponseList = sorted(paletteResponses)
-                # currentLoop.addData('paletteResponseCount', len(paletteResponseList))
-                # currentLoop.addData('paletteResponses', paletteResponseList)
-                # currentLoop.addData('paletteResponseEvents', paletteResponseEvents)
-                # currentLoop.addData('hit', hit)
-                # currentLoop.addData('falsealarm', fa)
-                # currentLoop.addData('correct rejection', cr)
-                # currentLoop.addData('miss', miss)
-                
-                # store stop times for rr_trial
-                rr_trial.tStop = globalClock.getTime(format='float')
-                rr_trial.tStopRefresh = tThisFlipGlobal
-                thisExp.addData('rr_trial.stopped', rr_trial.tStop)
-                trial_reed.stopReedMeasurement()
+                if trial_reed._reed_measuring:   trial_reed.stopReedMeasurement()
                 oo_palette.addData('trial_reed.rate', 100)
                 oo_palette.addData('trial_reed.holes', "inner")
                 oo_palette.addData('trial_reed.reedTimes', trial_reed.reedTimes)
@@ -2426,10 +2976,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     rows[i]["correct_rejections"] = correct_rejections
                     rows[i]["d_prime"]            = d_prime
             
-            # Save
-            pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)
-            
             # ===== DISPLAY SETUP =====
+            
+            feedback_display.alignText = "left"
+            feedback_display.bold = True
+            
             feedback_display_text = (
                 f"=========== FEEDBACK ===========\n"
                 f"d-prime:           {d_prime:.2f}\n"
@@ -2627,7 +3178,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 rating_keyboard.keys = []
                 rating_keyboard.rt = []
                 _rating_keyboard_allKeys = []
-                rating_display.setText(f"{sliderResponse} Effort")
+                rating_display.setText(cond_slider)
                 # store start times for rr_rating
                 rr_rating.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
                 rr_rating.tStart = globalClock.getTime(format='float')
@@ -2781,6 +3332,14 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if rating_keyboard.keys != None:  # we had a response
                     oo_slider.addData('rating_keyboard.rt', rating_keyboard.rt)
                     oo_slider.addData('rating_keyboard.duration', rating_keyboard.duration)
+                # Run 'End Routine' code from rating_code
+                # Write trial-level data
+                for palette_idx in range(NUM_PALETTES):
+                    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
+                        if cond_slider == "cognitive":
+                            rows[i]["rpe_cognitive"] = rating_slider.getRating()
+                        elif cond_slider == "physical":
+                            rows[i]["rpe_physical"] = rating_slider.getRating()
                 # the Routine "rr_rating" was not non-slip safe, so reset the non-slip timer
                 routineTimer.reset()
                 # mark thisOo_slider as finished
@@ -2819,7 +3378,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 oo_level.status = STARTED
             thisExp.nextEntry()
             
-        # completed NUM_LEVELS repeats of 'oo_level'
+        # completed NUM_LEVELS*NUM_LEVELS repeats of 'oo_level'
         oo_level.status = FINISHED
         
         if thisSession is not None:

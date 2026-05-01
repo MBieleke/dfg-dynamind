@@ -1,0 +1,3 @@
+# Keep experiment output data local.
+experiment-*/data/
+*_lastrun.py
