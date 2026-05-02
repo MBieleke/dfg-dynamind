@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2026.1.3),
-    on April 30, 2026, at 18:05
+    on May 02, 2026, at 14:23
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -42,6 +42,7 @@ import numpy as np
 import sounddevice as sd
 import threading
 import pandas as pd
+from collections import deque
 
 # IMPORT SUBMODULES ----
 # from scipy.stats import truncnorm, nur bei truncated normal distribution
@@ -50,6 +51,7 @@ from scipy.stats import norm
 from itertools import product
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
+import statistics
 # Run 'Before Experiment' code from setup_color_utils
 def rgb_to_lab(rgb):
     """
@@ -537,22 +539,26 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # --- Initialize components for Routine "rr_setup" ---
     # Run 'Begin Experiment' code from setup_constants
     # DEFINITIONS AND CONSTANTS ----
-    NUM_MVC         = 3  # How many MVC trials to conduct
-    NUM_BLOCKS      = 3  # How often each block within the domain is repeated
-    NUM_LEVELS      = 4  # How often each level within the block is repeated
-    NUM_PALETTES    = 10 # How many palettes are generated per trial
-    NUM_TARGETS     = 4  # How many targets appear in NUM_PALETTES palettes
-    NUM_DISTRACTORS = 8
+    NUM_MVC               = 3      # How many MVC trials to conduct
+    NUM_BLOCKS            = 3      # How often each block within the domain is repeated
+    NUM_LEVELS            = 4      # How often each level within the block is repeated
+    NUM_PALETTES_EXERCISE = 10     # for practice trials
+    NUM_PALETTES_REGULAR  = 24     # for main trials
+    NUM_TARGETS           = 4      # How many targets appear in NUM_PALETTES palettes
+    NUM_DISTRACTORS       = 8
+    NON_TARGET_PALETTES   = [2, 2] # the first and last x palettes that never contain a target
     
     # MIN, MAX, AND RANGE OF COGNITIVE AND PHYSICAL DEMAND
     PHYSICAL_DEMAND_MIN     = 0.03
     PHYSICAL_DEMAND_MAX     = 0.40
-    COGNITIVE_DEMAND_MIN    = 10
-    COGNITIVE_DEMAND_MAX    = 60
+    COGNITIVE_DEMAND_MIN    = 70
+    COGNITIVE_DEMAND_MAX    = 10
     PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()
     COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()
     
     TOLERANCE = 15.0
+    FORCE_BUFFER_LENGTH = 10
+    FORCE_BUFFER = deque(maxlen = FORCE_BUFFER_LENGTH)
     
     # TARGET COLORS ----
     TARGET_COLORS_RGB255 = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
@@ -616,19 +622,44 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     )
     if not _stream.active:
         _stream.start()
+    
+    # Keep stream running, but force target signal to silence
+    def mute_audio():
+        global _target_amp, _target_freq
+        with _state_lock:
+            _target_amp = 0.0
+            _target_freq = FREQ_LOW
+    
+    def deviation_to_interval(deviation, min_dev = TOLERANCE, max_dev = TOLERANCE*2):
+        """Maps deviation to beep interval in seconds. Outside range = no beep."""
+        if deviation < min_dev:
+            return None  # in zone, silent
+        # clamp to max_dev, then map to interval range
+        dev_clamped = min(deviation, max_dev)
+        # linear map: 15N -> 1.0s interval, 30N -> 0.2s interval
+        t = (dev_clamped - min_dev) / (max_dev - min_dev)  # 0.0 to 1.0
+        return 1.0 - t * 0.8
     # Run 'Begin Experiment' code from setup_random
     # =============================================================================
     # PALETTE GENERATION
     # =============================================================================
     def generate_trial_palettes(target_color_rgb255, cognitive_demand_level,
-                                 n_palettes = NUM_PALETTES, n_targets = NUM_TARGETS,
-                                 n_holes = NUM_DISTRACTORS):
+                                 n_palettes, n_targets = NUM_TARGETS,
+                                 n_holes = NUM_DISTRACTORS, non_target_palettes = NON_TARGET_PALETTES):
         """
         Generate all palettes for one trial.
         - n_targets palettes contain the target color at a random hole position
         - remaining palettes contain only distractors
         """
-        target_palette_indices = set(random.sample(range(n_palettes), n_targets))
+        available = n_palettes - sum(non_target_palettes)
+        if available < n_targets:
+            raise ValueError(
+                f"n_palettes={n_palettes} is too small to place {n_targets} target(s): "
+                f"only {available} eligible position(s) available (need at least {n_targets + non_target_palettes})."
+            )
+        
+        # Never show target in the first or last two palettes
+        target_palette_indices = set(random.sample(range(non_target_palettes[0], n_palettes - non_target_palettes[1]), n_targets))
     
         palettes = []
         for i in range(n_palettes):
@@ -646,26 +677,89 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # =============================================================================
     # CREATE TRIALS
     # =============================================================================
-    blocks = {b: [] for b in range(NUM_BLOCKS)}
-    for physical_demand_level, cognitive_demand_level in product(PHYSICAL_DEMAND_LEVELS, COGNITIVE_DEMAND_LEVELS):
-        for block, target_color_rgb255 in zip(blocks, random.sample(TARGET_COLORS_RGB255, 3)):
-            blocks[block].append({
-                "physical_demand_level":  physical_demand_level,
-                "cognitive_demand_level": cognitive_demand_level,
-                "target_color_rgb255":    target_color_rgb255,
-            })
+    def make_trial(physical_demand_level, cognitive_demand_level, target_color_rgb255, phase, num_palettes):
+        return {
+            "physical_demand_level":  physical_demand_level,
+            "cognitive_demand_level": cognitive_demand_level,
+            "target_color_rgb255":    target_color_rgb255,
+            "phase":                  phase,
+            "num_palettes":           num_palettes
+        }
     
-    for block in blocks.values():
+    # Practice 1: Low cognitive and low physical demand
+    practice_neutral = [
+        make_trial(
+            physical_demand_level  = PHYSICAL_DEMAND_MIN,
+            cognitive_demand_level = COGNITIVE_DEMAND_MIN,
+            target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),
+            phase                  = "practice_neutral",
+            num_palettes           = NUM_PALETTES_EXERCISE
+        )
+    ]
+    
+    # Practice 2: Increasing cognitive and low physical demand
+    practice_cognitive = [
+        make_trial(
+            physical_demand_level  = PHYSICAL_DEMAND_MIN,
+            cognitive_demand_level = demand,
+            target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),
+            phase                  = "practice_cognitive",
+            num_palettes           = NUM_PALETTES_EXERCISE
+        )
+        for demand in COGNITIVE_DEMAND_LEVELS
+    ]
+    
+    # Practice 3: Low cognitive and increasing physical demand
+    practice_physical = [
+        make_trial(
+            physical_demand_level  = demand,
+            cognitive_demand_level = COGNITIVE_DEMAND_MIN,
+            target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),
+            phase                  = "practice_physical",
+            num_palettes           = NUM_PALETTES_EXERCISE
+        )
+        for demand in PHYSICAL_DEMAND_LEVELS
+    ]
+    
+    practice_blocks = [practice_neutral, practice_cognitive, practice_physical]
+    
+    # Main experiment blocks
+    main_blocks = {b: [] for b in range(NUM_BLOCKS)}
+    for physical_demand_level, cognitive_demand_level in product(PHYSICAL_DEMAND_LEVELS, COGNITIVE_DEMAND_LEVELS):
+        for block, target_color_rgb255 in zip(main_blocks, random.sample(TARGET_COLORS_RGB255, 3)):
+            main_blocks[block].append(
+                make_trial(
+                    physical_demand_level  = physical_demand_level,
+                    cognitive_demand_level = cognitive_demand_level,
+                    target_color_rgb255    = target_color_rgb255,
+                    phase                  = "main",
+                    num_palettes           = NUM_PALETTES_REGULAR
+                )
+            )
+    
+    for block in main_blocks.values():
         random.shuffle(block)
+    
+    # Randomized main blocks, practice blocks always come first
+    main_block_order = list(main_blocks.keys())
+    random.shuffle(main_block_order)
+    
+    # Final list of blocks
+    blocks = []
+    blocks.extend(practice_blocks)
+    for b in main_block_order:
+        blocks.append(main_blocks[b])
     
     # =============================================================================
     # CREATE PALETTES
     # =============================================================================
-    for b, trials in blocks.items():
+    for b, trials in enumerate(blocks):
         for trial in trials:
+            n_palettes = NUM_PALETTES_EXERCISE if trial["phase"] != "main" else NUM_PALETTES_REGULAR
             palettes = generate_trial_palettes(
                 target_color_rgb255    = trial["target_color_rgb255"],
                 cognitive_demand_level = trial["cognitive_demand_level"],
+                n_palettes              = n_palettes
             )
             target = trial["target_color_rgb255"]
             target_palettes = [i for i, p in enumerate(palettes) if target in p]
@@ -679,7 +773,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # BALANCE CHECK
     # =============================================================================
     all_trials = []
-    for b, trials in blocks.items():
+    for b, trials in enumerate(blocks):
         for t in trials:
             all_trials.append({**{k: v for k, v in t.items() if k != "palettes"}, "block": b})
     df_check = pd.DataFrame(all_trials)
@@ -699,7 +793,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # BUILD LONG FORMAT ROWS
     # =============================================================================
     rows = []
-    for b, trials in blocks.items():
+    for b, trials in enumerate(blocks):
         for trial_idx, trial in enumerate(trials):
             for palette_idx, palette in enumerate(trial["palettes"]):
                 has_target = trial["target_color_rgb255"] in palette
@@ -707,9 +801,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     rows.append({
                         "block":                  b,
                         "trial_idx":              trial_idx,
+                        "mvc":                    None,
                         "physical_demand_level":  trial["physical_demand_level"],
                         "cognitive_demand_level": trial["cognitive_demand_level"],
                         "target_color_rgb255":    trial["target_color_rgb255"],
+                        "num_palettes":           trial["num_palettes"],
                         "palette_idx":            palette_idx,
                         "is_target_palette":      has_target,
                         "hole_idx":               hole_idx,
@@ -740,30 +836,15 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             palette_row_index[palette_key] = []
         palette_row_index[palette_key].append(i)
     
-    # =============================================================================
-    # EXPORT TO EXCEL WITH COLOR PREVIEW
-    # =============================================================================
-    # wb = Workbook()
-    # ws = wb.active
-    
-    # headers = list(rows[0].keys()) + ["color_preview"]
-    # ws.append(headers)
-    
-    # for row in rows:
-    #     converted = {k: str(v) if isinstance(v, list) else v for k, v in row.items()}
-    #     ws.append(list(converted.values()) + [""])
-    # 
-    #     color = row["hole_color_rgb255"]
-    #     hex_color = "{:02X}{:02X}{:02X}".format(color[0], color[1], color[2])
-    #     ws.cell(row=ws.max_row, column=len(headers)).fill = PatternFill(
-    #         start_color=hex_color, end_color=hex_color, fill_type="solid"
-    #     )
-    # 
-    # wb.save(thisExp.dataFileName + '_design.xlsx')
-    
     pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)
-    # print(f"\nSaved {len(rows)} rows to _design.csv")
-    # print(f"Expected: {NUM_BLOCKS} blocks × 16 trials × {NUM_PALETTES} palettes × {NUM_DISTRACTORS} holes = {NUM_BLOCKS * 16 * NUM_PALETTES * NUM_DISTRACTORS} rows")
+    
+    # Define some labels for later display
+    phase_labels = {
+        'practice_neutral':  'Practice - Neutral',
+        'practice_physical': 'Practice - Physical',
+        'practice_cognitive':'Practice - Cognitive',
+        'main':              'Main',
+    }
     # Run 'Begin Experiment' code from setup_ring
     # Main ring parameters
     ring_radius = 0.075  # distance of small circles from center
@@ -802,18 +883,21 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         )
         hole_labels.append(label)
     
-    # --- Initialize components for Routine "rr_start" ---
-    start_text = visual.TextStim(win=win, name='start_text',
+    # --- Initialize components for Routine "rr_start_mvc" ---
+    # Run 'Begin Experiment' code from start_mvc_code
+    # Define button for exercise stop
+    start_mvc_button_text = "Starte\nKalibrierung"
+    start_mvc_display = visual.TextStim(win=win, name='start_mvc_display',
         text='Fertig - es kann losgehen!',
         font='Arial',
         pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
-        depth=0.0);
-    start_button = visual.ButtonStim(win, 
-        text='START', font='Arvo',
+        depth=-1.0);
+    start_mvc_button = visual.ButtonStim(win, 
+        text='', font='Courier New',
         pos=(0, -0.2),
-        letterHeight=0.05,
+        letterHeight=0.025,
         size=(0.25, 0.1), 
         ori=0.0
         ,borderWidth=0.0,
@@ -823,10 +907,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         bold=True, italic=False,
         padding=None,
         anchor='center',
-        name='start_button',
-        depth=-1
+        name='start_mvc_button',
+        depth=-2
     )
-    start_button.buttonClock = core.Clock()
+    start_mvc_button.buttonClock = core.Clock()
     
     # --- Initialize components for Routine "rr_countdown" ---
     
@@ -856,6 +940,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         depth=-3.0);
     
     # --- Initialize components for Routine "rr_mvc" ---
+    # Run 'Begin Experiment' code from mvc_code
+    # Define button for exercise stop
+    mvc_stop_practice_text = "ÜBUNGSPHASE BEENDEN\n\n=> Kalibrierung startet"
     mvc_display = visual.TextStim(win=win, name='mvc_display',
         text='',
         font='Courier New',
@@ -864,10 +951,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         languageStyle='LTR',
         depth=-1.0);
     mvc_continue = visual.ButtonStim(win, 
-        text='Weiter', font='Arvo',
-        pos=(0, -0.3),
-        letterHeight=0.05,
-        size=(0.25, 0.1), 
+        text='', font='Courier New',
+        pos=(0.3, -0.3),
+        letterHeight=0.025,
+        size=(0.4, 0.1), 
         ori=0.0
         ,borderWidth=0.0,
         fillColor=(-1.0000, -0.2157, -1.0000), borderColor=None,
@@ -880,6 +967,55 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         depth=-2
     )
     mvc_continue.buttonClock = core.Clock()
+    mvc_stop_practice = visual.ButtonStim(win, 
+        text='', font='Courier New',
+        pos=(-0.3, -0.3),
+        letterHeight=0.025,
+        size=(0.4, 0.1), 
+        ori=0.0
+        ,borderWidth=0.0,
+        fillColor=(-1.0000, -0.2157, -1.0000), borderColor=None,
+        color='white', colorSpace='rgb',
+        opacity=None,
+        bold=True, italic=False,
+        padding=None,
+        anchor='center',
+        name='mvc_stop_practice',
+        depth=-3
+    )
+    mvc_stop_practice.buttonClock = core.Clock()
+    
+    # --- Initialize components for Routine "rr_start_exp" ---
+    # Run 'Begin Experiment' code from start_exp_code
+    # Define button for exercise stop
+    start_exp_button_text = "Starte\nExperiment"
+    
+    # DEBUG ONLY
+    mvc = 2000
+    start_exp_text = visual.TextStim(win=win, name='start_exp_text',
+        text='Kalibierung abgeschlossen. Das Experiment kann beginnen.',
+        font='Arial',
+        pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-1.0);
+    start_exp_button = visual.ButtonStim(win, 
+        text='', font='Arvo',
+        pos=(0, -0.2),
+        letterHeight=0.05,
+        size=(0.25, 0.1), 
+        ori=0.0
+        ,borderWidth=0.0,
+        fillColor=(-1.0000, -0.2157, -1.0000), borderColor=None,
+        color='white', colorSpace='rgb',
+        opacity=None,
+        bold=True, italic=False,
+        padding=None,
+        anchor='center',
+        name='start_exp_button',
+        depth=-2
+    )
+    start_exp_button.buttonClock = core.Clock()
     
     # --- Initialize components for Routine "rr_countdown" ---
     
@@ -920,32 +1056,59 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         languageStyle='LTR',
         depth=-4.0);
     
-    # --- Initialize components for Routine "rr_dprime" ---
-    feedback_keyboard = keyboard.Keyboard(deviceName='defaultKeyboard')
-    feedback_display = visual.TextStim(win=win, name='feedback_display',
+    # --- Initialize components for Routine "rr_rating" ---
+    rating_dprime_text = visual.TextStim(win=win, name='rating_dprime_text',
         text='',
         font='Courier New',
-        pos=(0, 0), draggable=False, height=0.04, wrapWidth=None, ori=0.0, 
+        pos=(-0.2, 0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-1.0);
+    rating_physical_text = visual.TextStim(win=win, name='rating_physical_text',
+        text='Körperliche Anstrengung',
+        font='Courier New',
+        pos=(0.4, -0.1), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-2.0);
-    
-    # --- Initialize components for Routine "rr_rating" ---
-    rating_slider = visual.Slider(win=win, name='rating_slider',
-        startValue=None, size=(1.0, 0.1), pos=(0, -0.2), units=win.units,
+    rating_physical = visual.Slider(win=win, name='rating_physical',
+        startValue=None, size=(0.5, 0.075), pos=(0.4, -0.2), units=win.units,
         labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
-        style='rating', styleTweaks=[], opacity=None,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
         labelColor='LightGray', markerColor='Red', lineColor='White', colorSpace='rgb',
-        font='Noto Sans', labelHeight=0.05,
-        flip=False, ori=0.0, depth=0, readOnly=False)
-    rating_keyboard = keyboard.Keyboard(deviceName='defaultKeyboard')
-    rating_display = visual.TextStim(win=win, name='rating_display',
-        text='',
-        font='Arial',
-        pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-3, readOnly=False)
+    rating_cognitive_text = visual.TextStim(win=win, name='rating_cognitive_text',
+        text='Kognitive Anstrengung',
+        font='Courier New',
+        pos=(0.4, 0.3), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
-        depth=-2.0);
+        depth=-4.0);
+    rating_cognitive = visual.Slider(win=win, name='rating_cognitive',
+        startValue=None, size=(0.5, 0.075), pos=(0.4, 0.2), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor='LightGray', markerColor='Red', lineColor='White', colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-5, readOnly=False)
+    rating_continue_button = visual.ButtonStim(win, 
+        text='WEITER', font='Courier New',
+        pos=(-0.2, -0.2),
+        letterHeight=0.035,
+        size=(0.25, 0.1), 
+        ori=0.0
+        ,borderWidth=0.0,
+        fillColor=(-1.0000, -0.2157, -1.0000), borderColor=None,
+        color='white', colorSpace='rgb',
+        opacity=None,
+        bold=True, italic=False,
+        padding=None,
+        anchor='center',
+        name='rating_continue_button',
+        depth=-6
+    )
+    rating_continue_button.buttonClock = core.Clock()
     
     # create some handy timers
     
@@ -1063,26 +1226,27 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # the Routine "rr_setup" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset()
     
-    # --- Prepare to start Routine "rr_start" ---
-    # create an object to store info about Routine rr_start
-    rr_start = data.Routine(
-        name='rr_start',
-        components=[start_text, start_button],
+    # --- Prepare to start Routine "rr_start_mvc" ---
+    # create an object to store info about Routine rr_start_mvc
+    rr_start_mvc = data.Routine(
+        name='rr_start_mvc',
+        components=[start_mvc_display, start_mvc_button],
     )
-    rr_start.status = NOT_STARTED
+    rr_start_mvc.status = NOT_STARTED
     continueRoutine = True
     # update component parameters for each repeat
-    # reset start_button to account for continued clicks & clear times on/off
-    start_button.reset()
-    # store start times for rr_start
-    rr_start.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
-    rr_start.tStart = globalClock.getTime(format='float')
-    rr_start.status = STARTED
-    thisExp.addData('rr_start.started', rr_start.tStart)
-    rr_start.maxDuration = None
+    start_mvc_button.setText(start_mvc_button_text)
+    # reset start_mvc_button to account for continued clicks & clear times on/off
+    start_mvc_button.reset()
+    # store start times for rr_start_mvc
+    rr_start_mvc.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+    rr_start_mvc.tStart = globalClock.getTime(format='float')
+    rr_start_mvc.status = STARTED
+    thisExp.addData('rr_start_mvc.started', rr_start_mvc.tStart)
+    rr_start_mvc.maxDuration = None
     # keep track of which components have finished
-    rr_startComponents = rr_start.components
-    for thisComponent in rr_start.components:
+    rr_start_mvcComponents = rr_start_mvc.components
+    for thisComponent in rr_start_mvc.components:
         thisComponent.tStart = None
         thisComponent.tStop = None
         thisComponent.tStartRefresh = None
@@ -1094,9 +1258,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     _timeToFirstFrame = win.getFutureFlipTime(clock="now")
     frameN = -1
     
-    # --- Run Routine "rr_start" ---
-    thisExp.currentRoutine = rr_start
-    rr_start.forceEnded = routineForceEnded = not continueRoutine
+    # --- Run Routine "rr_start_mvc" ---
+    thisExp.currentRoutine = rr_start_mvc
+    rr_start_mvc.forceEnded = routineForceEnded = not continueRoutine
     while continueRoutine:
         # get current time
         t = routineTimer.getTime()
@@ -1105,62 +1269,62 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
         # update/draw components on each frame
         
-        # *start_text* updates
+        # *start_mvc_display* updates
         
-        # if start_text is starting this frame...
-        if start_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+        # if start_mvc_display is starting this frame...
+        if start_mvc_display.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
             # keep track of start time/frame for later
-            start_text.frameNStart = frameN  # exact frame index
-            start_text.tStart = t  # local t and not account for scr refresh
-            start_text.tStartRefresh = tThisFlipGlobal  # on global time
-            win.timeOnFlip(start_text, 'tStartRefresh')  # time at next scr refresh
+            start_mvc_display.frameNStart = frameN  # exact frame index
+            start_mvc_display.tStart = t  # local t and not account for scr refresh
+            start_mvc_display.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(start_mvc_display, 'tStartRefresh')  # time at next scr refresh
             # add timestamp to datafile
-            thisExp.timestampOnFlip(win, 'start_text.started')
+            thisExp.timestampOnFlip(win, 'start_mvc_display.started')
             # update status
-            start_text.status = STARTED
-            start_text.setAutoDraw(True)
+            start_mvc_display.status = STARTED
+            start_mvc_display.setAutoDraw(True)
         
-        # if start_text is active this frame...
-        if start_text.status == STARTED:
+        # if start_mvc_display is active this frame...
+        if start_mvc_display.status == STARTED:
             # update params
             pass
-        # *start_button* updates
+        # *start_mvc_button* updates
         
-        # if start_button is starting this frame...
-        if start_button.status == NOT_STARTED and tThisFlip >= 0-frameTolerance:
+        # if start_mvc_button is starting this frame...
+        if start_mvc_button.status == NOT_STARTED and tThisFlip >= 0-frameTolerance:
             # keep track of start time/frame for later
-            start_button.frameNStart = frameN  # exact frame index
-            start_button.tStart = t  # local t and not account for scr refresh
-            start_button.tStartRefresh = tThisFlipGlobal  # on global time
-            win.timeOnFlip(start_button, 'tStartRefresh')  # time at next scr refresh
+            start_mvc_button.frameNStart = frameN  # exact frame index
+            start_mvc_button.tStart = t  # local t and not account for scr refresh
+            start_mvc_button.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(start_mvc_button, 'tStartRefresh')  # time at next scr refresh
             # add timestamp to datafile
-            thisExp.timestampOnFlip(win, 'start_button.started')
+            thisExp.timestampOnFlip(win, 'start_mvc_button.started')
             # update status
-            start_button.status = STARTED
-            win.callOnFlip(start_button.buttonClock.reset)
-            start_button.setAutoDraw(True)
+            start_mvc_button.status = STARTED
+            win.callOnFlip(start_mvc_button.buttonClock.reset)
+            start_mvc_button.setAutoDraw(True)
         
-        # if start_button is active this frame...
-        if start_button.status == STARTED:
+        # if start_mvc_button is active this frame...
+        if start_mvc_button.status == STARTED:
             # update params
             pass
-            # check whether start_button has been pressed
-            if start_button.isClicked:
-                if not start_button.wasClicked:
+            # check whether start_mvc_button has been pressed
+            if start_mvc_button.isClicked:
+                if not start_mvc_button.wasClicked:
                     # if this is a new click, store time of first click and clicked until
-                    start_button.timesOn.append(start_button.buttonClock.getTime())
-                    start_button.timesOff.append(start_button.buttonClock.getTime())
-                elif len(start_button.timesOff):
+                    start_mvc_button.timesOn.append(start_mvc_button.buttonClock.getTime())
+                    start_mvc_button.timesOff.append(start_mvc_button.buttonClock.getTime())
+                elif len(start_mvc_button.timesOff):
                     # if click is continuing from last frame, update time of clicked until
-                    start_button.timesOff[-1] = start_button.buttonClock.getTime()
-                if not start_button.wasClicked:
-                    # end routine when start_button is clicked
+                    start_mvc_button.timesOff[-1] = start_mvc_button.buttonClock.getTime()
+                if not start_mvc_button.wasClicked:
+                    # end routine when start_mvc_button is clicked
                     continueRoutine = False
-                if not start_button.wasClicked:
-                    # run callback code when start_button is clicked
+                if not start_mvc_button.wasClicked:
+                    # run callback code when start_mvc_button is clicked
                     pass
-        # take note of whether start_button was clicked, so that next frame we know if clicks are new
-        start_button.wasClicked = start_button.isClicked and start_button.status == STARTED
+        # take note of whether start_mvc_button was clicked, so that next frame we know if clicks are new
+        start_mvc_button.wasClicked = start_mvc_button.isClicked and start_mvc_button.status == STARTED
         
         # check for quit (typically the Esc key)
         if defaultKeyboard.getKeys(keyList=["escape"]):
@@ -1174,20 +1338,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 thisExp=thisExp, 
                 win=win, 
                 timers=[routineTimer, globalClock], 
-                currentRoutine=rr_start,
+                currentRoutine=rr_start_mvc,
             )
             # skip the frame we paused on
             continue
         
         # has a Component requested the Routine to end?
         if not continueRoutine:
-            rr_start.forceEnded = routineForceEnded = True
+            rr_start_mvc.forceEnded = routineForceEnded = True
         # has the Routine been forcibly ended?
-        if rr_start.forceEnded or routineForceEnded:
+        if rr_start_mvc.forceEnded or routineForceEnded:
             break
         # has every Component finished?
         continueRoutine = False
-        for thisComponent in rr_start.components:
+        for thisComponent in rr_start_mvc.components:
             if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
                 continueRoutine = True
                 break  # at least one component has not yet finished
@@ -1196,23 +1360,23 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
             win.flip()
     
-    # --- Ending Routine "rr_start" ---
-    for thisComponent in rr_start.components:
+    # --- Ending Routine "rr_start_mvc" ---
+    for thisComponent in rr_start_mvc.components:
         if hasattr(thisComponent, "setAutoDraw"):
             thisComponent.setAutoDraw(False)
-    # store stop times for rr_start
-    rr_start.tStop = globalClock.getTime(format='float')
-    rr_start.tStopRefresh = tThisFlipGlobal
-    thisExp.addData('rr_start.stopped', rr_start.tStop)
-    thisExp.addData('start_button.numClicks', start_button.numClicks)
-    if start_button.numClicks:
-       thisExp.addData('start_button.timesOn', start_button.timesOn)
-       thisExp.addData('start_button.timesOff', start_button.timesOff)
+    # store stop times for rr_start_mvc
+    rr_start_mvc.tStop = globalClock.getTime(format='float')
+    rr_start_mvc.tStopRefresh = tThisFlipGlobal
+    thisExp.addData('rr_start_mvc.stopped', rr_start_mvc.tStop)
+    thisExp.addData('start_mvc_button.numClicks', start_mvc_button.numClicks)
+    if start_mvc_button.numClicks:
+       thisExp.addData('start_mvc_button.timesOn', start_mvc_button.timesOn)
+       thisExp.addData('start_mvc_button.timesOff', start_mvc_button.timesOff)
     else:
-       thisExp.addData('start_button.timesOn', "")
-       thisExp.addData('start_button.timesOff', "")
+       thisExp.addData('start_mvc_button.timesOn', "")
+       thisExp.addData('start_mvc_button.timesOff', "")
     thisExp.nextEntry()
-    # the Routine "rr_start" was not non-slip safe, so reset the non-slip timer
+    # the Routine "rr_start_mvc" was not non-slip safe, so reset the non-slip timer
     routineTimer.reset()
     
     # set up handler to look after randomisation of conditions etc
@@ -1253,7 +1417,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # set up handler to look after randomisation of conditions etc
         oo_mvc_rep = data.TrialHandler2(
             name='oo_mvc_rep',
-            nReps=cond_num_maxforce, 
+            nReps=maxforce_repetitions, 
             method='sequential', 
             extraInfo=expInfo, 
             originPath=-1, 
@@ -1505,13 +1669,13 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 cur_mvc = max(cur_mvc, maxforce_force.whiteForce)
                 
                 # Update MVC only if we are in a calibration trial
-                if cond_maxforce_type == "calibration":
+                if maxforce_type == "Calibration":
                     mvc = max(mvc, cur_mvc)
                 
                 # Display text
                 maxforce_display_text = (
                     f"============ TRIAL INFO ============\n"
-                    f"Trial Type:        {cond_maxforce_type}\n"
+                    f"Trial Type:        {maxforce_type} ({oo_mvc_rep.thisN+1}/{maxforce_repetitions})\n"
                     f"Current Force:     {maxforce_force.whiteForce:.2f} N\n"
                     f"MVC (cur / max):   {cur_mvc:.2f} / {mvc:.2f} N\n"
                     f"====================================\n"
@@ -1712,7 +1876,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # create an object to store info about Routine rr_mvc
             rr_mvc = data.Routine(
                 name='rr_mvc',
-                components=[mvc_display, mvc_continue],
+                components=[mvc_display, mvc_continue, mvc_stop_practice],
             )
             rr_mvc.status = NOT_STARTED
             continueRoutine = True
@@ -1723,6 +1887,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             mvc_display.bold = True
             # reset mvc_continue to account for continued clicks & clear times on/off
             mvc_continue.reset()
+            mvc_stop_practice.setText(mvc_stop_practice_text)
+            # reset mvc_stop_practice to account for continued clicks & clear times on/off
+            mvc_stop_practice.reset()
             # store start times for rr_mvc
             rr_mvc.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
             rr_mvc.tStart = globalClock.getTime(format='float')
@@ -1756,6 +1923,18 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 tThisFlipGlobal = win.getFutureFlipTime(clock=None)
                 frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
                 # update/draw components on each frame
+                # Run 'Each Frame' code from mvc_code
+                # Measure time
+                remaining = max(0, maxforce_duration - t)
+                if remaining <= 0:
+                    continueRoutine = False
+                
+                # Update button label
+                mvc_continue_label = (
+                    f'WEITER IN {int(remaining)}s\n'
+                    + f'\n'
+                    + f'oder hier Klicken'
+                )
                 
                 # *mvc_display* updates
                 
@@ -1795,7 +1974,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # if mvc_continue is active this frame...
                 if mvc_continue.status == STARTED:
                     # update params
-                    pass
+                    mvc_continue.setText(mvc_continue_label, log=False)
                     # check whether mvc_continue has been pressed
                     if mvc_continue.isClicked:
                         if not mvc_continue.wasClicked:
@@ -1813,6 +1992,43 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             pass
                 # take note of whether mvc_continue was clicked, so that next frame we know if clicks are new
                 mvc_continue.wasClicked = mvc_continue.isClicked and mvc_continue.status == STARTED
+                # *mvc_stop_practice* updates
+                
+                # if mvc_stop_practice is starting this frame...
+                if mvc_stop_practice.status == NOT_STARTED and maxforce_type == "Practice":
+                    # keep track of start time/frame for later
+                    mvc_stop_practice.frameNStart = frameN  # exact frame index
+                    mvc_stop_practice.tStart = t  # local t and not account for scr refresh
+                    mvc_stop_practice.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(mvc_stop_practice, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'mvc_stop_practice.started')
+                    # update status
+                    mvc_stop_practice.status = STARTED
+                    win.callOnFlip(mvc_stop_practice.buttonClock.reset)
+                    mvc_stop_practice.setAutoDraw(True)
+                
+                # if mvc_stop_practice is active this frame...
+                if mvc_stop_practice.status == STARTED:
+                    # update params
+                    pass
+                    # check whether mvc_stop_practice has been pressed
+                    if mvc_stop_practice.isClicked:
+                        if not mvc_stop_practice.wasClicked:
+                            # if this is a new click, store time of first click and clicked until
+                            mvc_stop_practice.timesOn.append(mvc_stop_practice.buttonClock.getTime())
+                            mvc_stop_practice.timesOff.append(mvc_stop_practice.buttonClock.getTime())
+                        elif len(mvc_stop_practice.timesOff):
+                            # if click is continuing from last frame, update time of clicked until
+                            mvc_stop_practice.timesOff[-1] = mvc_stop_practice.buttonClock.getTime()
+                        if not mvc_stop_practice.wasClicked:
+                            # end routine when mvc_stop_practice is clicked
+                            continueRoutine = False
+                        if not mvc_stop_practice.wasClicked:
+                            # run callback code when mvc_stop_practice is clicked
+                            oo_mvc_rep.finished = True
+                # take note of whether mvc_stop_practice was clicked, so that next frame we know if clicks are new
+                mvc_stop_practice.wasClicked = mvc_stop_practice.isClicked and mvc_stop_practice.status == STARTED
                 
                 # check for quit (typically the Esc key)
                 if defaultKeyboard.getKeys(keyList=["escape"]):
@@ -1856,6 +2072,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             rr_mvc.tStop = globalClock.getTime(format='float')
             rr_mvc.tStopRefresh = tThisFlipGlobal
             thisExp.addData('rr_mvc.stopped', rr_mvc.tStop)
+            # Run 'End Routine' code from mvc_code
+            # Save MVC value
+            for row in rows:
+                row["mvc"] = mvc
             oo_mvc_rep.addData('mvc_continue.numClicks', mvc_continue.numClicks)
             if mvc_continue.numClicks:
                oo_mvc_rep.addData('mvc_continue.timesOn', mvc_continue.timesOn)
@@ -1863,6 +2083,13 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             else:
                oo_mvc_rep.addData('mvc_continue.timesOn', "")
                oo_mvc_rep.addData('mvc_continue.timesOff', "")
+            oo_mvc_rep.addData('mvc_stop_practice.numClicks', mvc_stop_practice.numClicks)
+            if mvc_stop_practice.numClicks:
+               oo_mvc_rep.addData('mvc_stop_practice.timesOn', mvc_stop_practice.timesOn)
+               oo_mvc_rep.addData('mvc_stop_practice.timesOff', mvc_stop_practice.timesOff)
+            else:
+               oo_mvc_rep.addData('mvc_stop_practice.timesOn', "")
+               oo_mvc_rep.addData('mvc_stop_practice.timesOff', "")
             # the Routine "rr_mvc" was not non-slip safe, so reset the non-slip timer
             routineTimer.reset()
             # mark thisOo_mvc_rep as finished
@@ -1880,7 +2107,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 oo_mvc_rep.status = STARTED
             thisExp.nextEntry()
             
-        # completed cond_num_maxforce repeats of 'oo_mvc_rep'
+        # completed maxforce_repetitions repeats of 'oo_mvc_rep'
         oo_mvc_rep.status = FINISHED
         
         if thisSession is not None:
@@ -1908,11 +2135,164 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # if running in a Session with a Liaison client, send data up to now
         thisSession.sendExperimentData()
     
+    # --- Prepare to start Routine "rr_start_exp" ---
+    # create an object to store info about Routine rr_start_exp
+    rr_start_exp = data.Routine(
+        name='rr_start_exp',
+        components=[start_exp_text, start_exp_button],
+    )
+    rr_start_exp.status = NOT_STARTED
+    continueRoutine = True
+    # update component parameters for each repeat
+    start_exp_button.setText(start_exp_button_text)
+    # reset start_exp_button to account for continued clicks & clear times on/off
+    start_exp_button.reset()
+    # store start times for rr_start_exp
+    rr_start_exp.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+    rr_start_exp.tStart = globalClock.getTime(format='float')
+    rr_start_exp.status = STARTED
+    thisExp.addData('rr_start_exp.started', rr_start_exp.tStart)
+    rr_start_exp.maxDuration = None
+    # keep track of which components have finished
+    rr_start_expComponents = rr_start_exp.components
+    for thisComponent in rr_start_exp.components:
+        thisComponent.tStart = None
+        thisComponent.tStop = None
+        thisComponent.tStartRefresh = None
+        thisComponent.tStopRefresh = None
+        if hasattr(thisComponent, 'status'):
+            thisComponent.status = NOT_STARTED
+    # reset timers
+    t = 0
+    _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+    frameN = -1
+    
+    # --- Run Routine "rr_start_exp" ---
+    thisExp.currentRoutine = rr_start_exp
+    rr_start_exp.forceEnded = routineForceEnded = not continueRoutine
+    while continueRoutine:
+        # get current time
+        t = routineTimer.getTime()
+        tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+        tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+        frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+        # update/draw components on each frame
+        
+        # *start_exp_text* updates
+        
+        # if start_exp_text is starting this frame...
+        if start_exp_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+            # keep track of start time/frame for later
+            start_exp_text.frameNStart = frameN  # exact frame index
+            start_exp_text.tStart = t  # local t and not account for scr refresh
+            start_exp_text.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(start_exp_text, 'tStartRefresh')  # time at next scr refresh
+            # add timestamp to datafile
+            thisExp.timestampOnFlip(win, 'start_exp_text.started')
+            # update status
+            start_exp_text.status = STARTED
+            start_exp_text.setAutoDraw(True)
+        
+        # if start_exp_text is active this frame...
+        if start_exp_text.status == STARTED:
+            # update params
+            pass
+        # *start_exp_button* updates
+        
+        # if start_exp_button is starting this frame...
+        if start_exp_button.status == NOT_STARTED and tThisFlip >= 0-frameTolerance:
+            # keep track of start time/frame for later
+            start_exp_button.frameNStart = frameN  # exact frame index
+            start_exp_button.tStart = t  # local t and not account for scr refresh
+            start_exp_button.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(start_exp_button, 'tStartRefresh')  # time at next scr refresh
+            # add timestamp to datafile
+            thisExp.timestampOnFlip(win, 'start_exp_button.started')
+            # update status
+            start_exp_button.status = STARTED
+            win.callOnFlip(start_exp_button.buttonClock.reset)
+            start_exp_button.setAutoDraw(True)
+        
+        # if start_exp_button is active this frame...
+        if start_exp_button.status == STARTED:
+            # update params
+            pass
+            # check whether start_exp_button has been pressed
+            if start_exp_button.isClicked:
+                if not start_exp_button.wasClicked:
+                    # if this is a new click, store time of first click and clicked until
+                    start_exp_button.timesOn.append(start_exp_button.buttonClock.getTime())
+                    start_exp_button.timesOff.append(start_exp_button.buttonClock.getTime())
+                elif len(start_exp_button.timesOff):
+                    # if click is continuing from last frame, update time of clicked until
+                    start_exp_button.timesOff[-1] = start_exp_button.buttonClock.getTime()
+                if not start_exp_button.wasClicked:
+                    # end routine when start_exp_button is clicked
+                    continueRoutine = False
+                if not start_exp_button.wasClicked:
+                    # run callback code when start_exp_button is clicked
+                    pass
+        # take note of whether start_exp_button was clicked, so that next frame we know if clicks are new
+        start_exp_button.wasClicked = start_exp_button.isClicked and start_exp_button.status == STARTED
+        
+        # check for quit (typically the Esc key)
+        if defaultKeyboard.getKeys(keyList=["escape"]):
+            thisExp.status = FINISHED
+        if thisExp.status == FINISHED or endExpNow:
+            endExperiment(thisExp, win=win)
+            return
+        # pause experiment here if requested
+        if thisExp.status == PAUSED:
+            pauseExperiment(
+                thisExp=thisExp, 
+                win=win, 
+                timers=[routineTimer, globalClock], 
+                currentRoutine=rr_start_exp,
+            )
+            # skip the frame we paused on
+            continue
+        
+        # has a Component requested the Routine to end?
+        if not continueRoutine:
+            rr_start_exp.forceEnded = routineForceEnded = True
+        # has the Routine been forcibly ended?
+        if rr_start_exp.forceEnded or routineForceEnded:
+            break
+        # has every Component finished?
+        continueRoutine = False
+        for thisComponent in rr_start_exp.components:
+            if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                continueRoutine = True
+                break  # at least one component has not yet finished
+        
+        # refresh the screen
+        if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+            win.flip()
+    
+    # --- Ending Routine "rr_start_exp" ---
+    for thisComponent in rr_start_exp.components:
+        if hasattr(thisComponent, "setAutoDraw"):
+            thisComponent.setAutoDraw(False)
+    # store stop times for rr_start_exp
+    rr_start_exp.tStop = globalClock.getTime(format='float')
+    rr_start_exp.tStopRefresh = tThisFlipGlobal
+    thisExp.addData('rr_start_exp.stopped', rr_start_exp.tStop)
+    thisExp.addData('start_exp_button.numClicks', start_exp_button.numClicks)
+    if start_exp_button.numClicks:
+       thisExp.addData('start_exp_button.timesOn', start_exp_button.timesOn)
+       thisExp.addData('start_exp_button.timesOff', start_exp_button.timesOff)
+    else:
+       thisExp.addData('start_exp_button.timesOn', "")
+       thisExp.addData('start_exp_button.timesOff', "")
+    thisExp.nextEntry()
+    # the Routine "rr_start_exp" was not non-slip safe, so reset the non-slip timer
+    routineTimer.reset()
+    
     # set up handler to look after randomisation of conditions etc
     oo_block = data.TrialHandler2(
         name='oo_block',
-        nReps=NUM_BLOCKS, 
-        method='random', 
+        nReps=len(blocks), 
+        method='sequential', 
         extraInfo=expInfo, 
         originPath=-1, 
         trialList=[None], 
@@ -2112,7 +2492,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         # set up handler to look after randomisation of conditions etc
         oo_level = data.TrialHandler2(
             name='oo_level',
-            nReps=NUM_LEVELS*NUM_LEVELS, 
+            nReps=len(blocks[oo_block.thisN]), 
             method='random', 
             extraInfo=expInfo, 
             originPath=-1, 
@@ -2157,11 +2537,16 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # ===== CONDITION SETUP =====
             
             # Get data for current block and trial
-            print("oo_block.thisN: ", oo_block.thisN)
-            print("oo_level.thisN: ", oo_level.thisN)
-            cur_physical_demand_level  = blocks[oo_block.thisN][oo_level.thisN]['physical_demand_level']
-            cur_cognitive_demand_level = blocks[oo_block.thisN][oo_level.thisN]['cognitive_demand_level']
-            cur_target_color_rgb255    = blocks[oo_block.thisN][oo_level.thisN]['target_color_rgb255']
+            cur_block_trials = blocks[oo_block.thisN]
+            cur_trial = cur_block_trials[oo_level.thisN]
+            cur_total_blocks = len(blocks)
+            cur_trials_in_block = len(cur_block_trials)
+            
+            cur_num_palettes = cur_trial['num_palettes']
+            cur_physical_demand_level = cur_trial['physical_demand_level']
+            cur_cognitive_demand_level = cur_trial['cognitive_demand_level']
+            cur_target_color_rgb255 = cur_trial['target_color_rgb255']
+            cur_phase = cur_trial.get('phase', 'main')
             
             # ===== PERFORMANCE SETUP =====
             
@@ -2171,9 +2556,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # =============================================================================
             # AUDIO - BEGIN ROUTINE
             # =============================================================================
-            with _state_lock:
-                _target_amp  = 0.0
-                _target_freq = FREQ_LOW
+            mute_audio()  # Start routine silent
+            proposed = 0  # Start routine within force tolerance
+            _last_beep_t = 0
             
             targetForce     = cur_physical_demand_level * mvc
             lower_threshold = max(targetForce - TOLERANCE, 0)
@@ -2181,7 +2566,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             
             toneState    = 0
             _lastSwitchT = -1e9
-            _last_beep_t = -1e9  # tracks last beep time
             
             
             # ===== DISPLAY SETUP =====
@@ -2234,12 +2618,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # AUDIO - EACH FRAME
                 # =============================================================================
                 if target_force.whiteForce is not None:
-                    if target_force.whiteForce > upper_threshold:
-                        proposed = 2
-                    elif target_force.whiteForce < lower_threshold:
-                        proposed = 1
-                    else:
-                        proposed = 0
+                    # Populate the force buffer for smooth feedback
+                    FORCE_BUFFER.append(max(target_force.whiteForce, 0))
+                    smooth_force = statistics.median(FORCE_BUFFER)
+                    
+                    if len(FORCE_BUFFER) >= FORCE_BUFFER_LENGTH:
+                        if smooth_force > upper_threshold:
+                            proposed = 2
+                            deviation = smooth_force - upper_threshold
+                        elif smooth_force < lower_threshold:
+                            proposed = 1
+                            deviation = lower_threshold - smooth_force
+                        else:
+                            proposed = 0
+                            deviation = 0
                 
                     if proposed != toneState and (t - _lastSwitchT) >= STATE_HOLD:
                         toneState    = proposed
@@ -2254,27 +2646,29 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             _target_freq = freq
                             _target_amp  = amp
                 else:
+                    mute_audio()
                     print("Force is None!")
                 
                 # Create the target display text
-                if target_force.whiteForce > upper_threshold:
+                if smooth_force > upper_threshold:
                     deviation_symbol = "\u2191\u2191\u2191"  # ↑
-                elif target_force.whiteForce < lower_threshold:
+                elif smooth_force < lower_threshold:
                     deviation_symbol = "\u2193\u2193\u2193"  # ↓
                 else:
                     deviation_symbol = "\u2013\u2013\u2013"  # – (on target)
                 
                 target_display_text = (
                     f"============ TRIAL INFO ================\n"
-                    f"BLOCK {oo_block.thisN+1:2}/{NUM_BLOCKS} | TRIAL {oo_level.thisN+1:2}/{NUM_LEVELS ** 2}\n"
+                    f"PHASE: {phase_labels.get(cur_phase, cur_phase)}\n"
+                    f"BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block}\n"
                     f"----------------------------------------\n"
                     f"Target Color:      {cur_target_color_name}\n"
-                    f"Physical demand:   {cur_physical_demand_level}\n"
-                    f"Cognitive demand:  {cur_cognitive_demand_level}\n"
+                    f"Physical demand:   {cur_physical_demand_level*100:.0f}% MVC\n"
+                    f"Cognitive demand:  {cur_cognitive_demand_level:.0f} dE\n"
                     f"----------------------------------------\n"
                     f"MVC:               {mvc:03.0f} N\n"
                     f"Target:            {lower_threshold:03.0f} N | {targetForce:03.0f} N | {upper_threshold:03.0f} N\n"
-                    f"Force:                     {target_force.whiteForce:03.0f} N\n"
+                    f"Force:                     {smooth_force:03.0f} N\n"
                     f"Deviation:                 {deviation_symbol}\n"
                     f"========================================\n"
                 )
@@ -2478,7 +2872,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # set up handler to look after randomisation of conditions etc
             oo_palette = data.TrialHandler2(
                 name='oo_palette',
-                nReps=NUM_PALETTES, 
+                nReps=cur_num_palettes, 
                 method='random', 
                 extraInfo=expInfo, 
                 originPath=-1, 
@@ -2521,9 +2915,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # update component parameters for each repeat
                 # Run 'Begin Routine' code from trial_color_code
                 # ===== CONDITION SETUP =====
-                cur_palette             = blocks[oo_block.thisN][oo_level.thisN]['palettes'][oo_palette.thisN]
-                cur_palette_has_target  = blocks[oo_block.thisN][oo_level.thisN]['palette_has_target'][oo_palette.thisN]
-                cur_palette_target_hole = blocks[oo_block.thisN][oo_level.thisN]['palette_target_hole'][oo_palette.thisN]
+                cur_trial = blocks[oo_block.thisN][oo_level.thisN]
+                
+                cur_palette             = cur_trial['palettes'][oo_palette.thisN]
+                cur_palette_has_target  = cur_trial['palette_has_target'][oo_palette.thisN]
+                cur_palette_target_hole = cur_trial['palette_target_hole'][oo_palette.thisN]
                 
                 prev_reed_holes = None
                 prev_reed_actions = None
@@ -2532,17 +2928,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # =============================================================================
                 # AUDIO - BEGIN ROUTINE
                 # =============================================================================
-                with _state_lock:
-                    _target_amp  = 0.0
-                    _target_freq = FREQ_LOW
-                
                 targetForce     = cur_physical_demand_level * mvc
                 lower_threshold = max(targetForce - TOLERANCE, 0)
                 upper_threshold = targetForce + TOLERANCE
                 
                 toneState    = 0
                 _lastSwitchT = -1e9
-                _last_beep_t = -1e9  # tracks last beep time
                 
                 
                 # ===== DISPLAY SETUP =====
@@ -2591,12 +2982,17 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # AUDIO - EACH FRAME
                     # =============================================================================
                     if trial_force.whiteForce is not None:
-                        if trial_force.whiteForce > upper_threshold:
-                            proposed = 2
-                        elif trial_force.whiteForce < lower_threshold:
-                            proposed = 1
-                        else:
-                            proposed = 0
+                        # Populate the force buffer for smooth feedback
+                        FORCE_BUFFER.append(max(trial_force.whiteForce, 0))
+                        smooth_force = statistics.median(FORCE_BUFFER)
+                        
+                        if len(FORCE_BUFFER) >= FORCE_BUFFER_LENGTH:
+                            if smooth_force > upper_threshold:
+                                proposed = 2
+                            elif smooth_force < lower_threshold:
+                                proposed = 1
+                            else:
+                                proposed = 0
                     
                         if proposed != toneState and (t - _lastSwitchT) >= STATE_HOLD:
                             toneState    = proposed
@@ -2611,28 +3007,29 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                                 _target_freq = freq
                                 _target_amp  = amp
                     else:
+                        mute_audio()
                         print("Force is None!")
                     
-                    
                     # ===== DISPLAY SETUP =====
-                    if trial_force.whiteForce > upper_threshold:
+                    if smooth_force > upper_threshold:
                         deviation_symbol = "\u2191\u2191\u2191"  # ↑
-                    elif trial_force.whiteForce < lower_threshold:
+                    elif smooth_force < lower_threshold:
                         deviation_symbol = "\u2193\u2193\u2193"  # ↓
                     else:
                         deviation_symbol = "\u2013\u2013\u2013"  # – (on target)
                     
                     trial_display_text = (
                         f"============ TRIAL INFO ================\n"
-                        f"BLOCK {oo_block.thisN+1:2}/{NUM_BLOCKS} | TRIAL {oo_level.thisN+1:2}/{NUM_LEVELS ** 2} | PALETTE {oo_palette.thisN+1:2}/{NUM_PALETTES}\n"
+                        f"PHASE: {phase_labels.get(cur_phase, cur_phase)}\n"
+                        f"BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block} | PALETTE {oo_palette.thisN+1:2}/{cur_num_palettes}\n"
                         f"----------------------------------------\n"
                         f"Target Color:      {cur_target_color_name}\n"
-                        f"Physical demand:   {cur_physical_demand_level}\n"
-                        f"Cognitive demand:  {cur_cognitive_demand_level}\n"
+                        f"Physical demand:   {cur_physical_demand_level*100}% MVC\n"
+                        f"Cognitive demand:  {cur_cognitive_demand_level} dE\n"
                         f"----------------------------------------\n"
                         f"MVC:               {mvc:03.0f} N\n"
                         f"Target:            {lower_threshold:03.0f} N | {targetForce:03.0f} N | {upper_threshold:03.0f} N\n"
-                        f"Force:                     {trial_force.whiteForce:03.0f} N\n"
+                        f"Force:                     {smooth_force:03.0f} N\n"
                         f"Deviation:                 {deviation_symbol}\n"
                         f"========================================\n"
                     )
@@ -2838,6 +3235,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 rr_trial.tStopRefresh = tThisFlipGlobal
                 thisExp.addData('rr_trial.stopped', rr_trial.tStop)
                 # Run 'End Routine' code from trial_color_code
+                # Mute audio
+                # mute_audio()
+                
+                # Clear force buffer
+                # FORCE_BUFFER.clear()
+                
                 # Determine d-prime metrics
                 is_hit               = int(cur_palette_has_target and cur_palette_target_hole in trial_reed.reedHoles)
                 is_false_alarm       = int(not cur_palette_has_target and len(trial_reed.reedHoles) > 0)
@@ -2852,9 +3255,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 
                 # Get the first insertion event (action == 1) across all reed events
                 first_insert_idx = next((h for h, a in zip(trial_reed.reedHoles, trial_reed.reedActions) if a == 1), None)
-                first_insert_rt  = next((t for t, a in zip(trial_reed.reedTimes,  trial_reed.reedActions) if a == 1), None)
-                print("first_insert_rt: ", first_insert_rt)
-                print("trial_reed.started: ", trial_reed.started)
+                first_insert_rt  = next((t for t, a in zip(trial_reed.reedTimesRelative, trial_reed.reedActions) if a == 1), None)
+                
+                print(f"Reed events: {len(trial_reed.reedActions)} total | "
+                      f"first insertion: hole={first_insert_idx}, "
+                      f"rt_rel={first_insert_rt:.3f}s" if first_insert_rt is not None else "rt=None")
                 
                 # Write hole-level data: mark which hole was first selected and its RT
                 for hole_idx in range(NUM_DISTRACTORS):
@@ -2871,7 +3276,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if trial_reed._reed_measuring:   trial_reed.stopReedMeasurement()
                 oo_palette.addData('trial_reed.rate', 100)
                 oo_palette.addData('trial_reed.holes', "inner")
+                oo_palette.addData('trial_reed.reedMeasurementStart', trial_reed.reedMeasurementStart)
                 oo_palette.addData('trial_reed.reedTimes', trial_reed.reedTimes)
+                oo_palette.addData('trial_reed.reedTimesRelative', trial_reed.reedTimesRelative)
                 oo_palette.addData('trial_reed.reedHoles', trial_reed.reedHoles)
                 oo_palette.addData('trial_reed.reedActions', trial_reed.reedActions)
                 oo_palette.addData('trial_reed.reedSummary', trial_reed.reedSummary)
@@ -2940,24 +3347,27 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     oo_palette.status = STARTED
                 thisExp.nextEntry()
                 
-            # completed NUM_PALETTES repeats of 'oo_palette'
+            # completed cur_num_palettes repeats of 'oo_palette'
             oo_palette.status = FINISHED
             
             if thisSession is not None:
                 # if running in a Session with a Liaison client, send data up to now
                 thisSession.sendExperimentData()
             
-            # --- Prepare to start Routine "rr_dprime" ---
-            # create an object to store info about Routine rr_dprime
-            rr_dprime = data.Routine(
-                name='rr_dprime',
-                components=[feedback_keyboard, feedback_display],
+            # --- Prepare to start Routine "rr_rating" ---
+            # create an object to store info about Routine rr_rating
+            rr_rating = data.Routine(
+                name='rr_rating',
+                components=[rating_dprime_text, rating_physical_text, rating_physical, rating_cognitive_text, rating_cognitive, rating_continue_button],
             )
-            rr_dprime.status = NOT_STARTED
+            rr_rating.status = NOT_STARTED
             continueRoutine = True
             # update component parameters for each repeat
-            # Run 'Begin Routine' code from feedback_code
-            #dprime Calculation
+            # Run 'Begin Routine' code from rating_code
+            # Mute audio if still running
+            mute_audio()
+            
+            # dprime Calculation
             H = hits + misses
             F = false_alarms + correct_rejections
             
@@ -2968,7 +3378,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             currentLoop.addData('d_prime', d_prime)
             
             # Write trial-level data
-            for palette_idx in range(NUM_PALETTES):
+            for palette_idx in range(cur_num_palettes):
                 for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
                     rows[i]["hits"]               = hits
                     rows[i]["false_alarms"]       = false_alarms
@@ -2977,33 +3387,34 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     rows[i]["d_prime"]            = d_prime
             
             # ===== DISPLAY SETUP =====
-            
-            feedback_display.alignText = "left"
-            feedback_display.bold = True
+            # rating_dprime_text.alignText = "left"
+            rating_dprime_text.bold = True
+            rating_physical_text.bold = True
+            rating_cognitive_text.bold = True
             
             feedback_display_text = (
-                f"=========== FEEDBACK ===========\n"
-                f"d-prime:           {d_prime:.2f}\n"
-                f"Hits:              {hits}\n"
-                f"Misses:            {misses}\n"
-                f"False Alarms:      {false_alarms}\n"
-                f"Correct Rej.:      {correct_rejections}\n"
-                f"================================\n"
+                f"==== PERFORMANCE ====\n"
+                f"d-prime:      {d_prime:.2f}\n"
+                f"Hits:           {hits}\n"
+                f"Misses:         {misses}\n"
+                f"False Alarms:   {false_alarms}\n"
+                f"Correct Rej.:   {correct_rejections}\n"
+                f"====================="
             )
-            # create starting attributes for feedback_keyboard
-            feedback_keyboard.keys = []
-            feedback_keyboard.rt = []
-            _feedback_keyboard_allKeys = []
-            feedback_display.setText(feedback_display_text)
-            # store start times for rr_dprime
-            rr_dprime.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
-            rr_dprime.tStart = globalClock.getTime(format='float')
-            rr_dprime.status = STARTED
-            thisExp.addData('rr_dprime.started', rr_dprime.tStart)
-            rr_dprime.maxDuration = None
+            rating_dprime_text.setText(feedback_display_text)
+            rating_physical.reset()
+            rating_cognitive.reset()
+            # reset rating_continue_button to account for continued clicks & clear times on/off
+            rating_continue_button.reset()
+            # store start times for rr_rating
+            rr_rating.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+            rr_rating.tStart = globalClock.getTime(format='float')
+            rr_rating.status = STARTED
+            thisExp.addData('rr_rating.started', rr_rating.tStart)
+            rr_rating.maxDuration = None
             # keep track of which components have finished
-            rr_dprimeComponents = rr_dprime.components
-            for thisComponent in rr_dprime.components:
+            rr_ratingComponents = rr_rating.components
+            for thisComponent in rr_rating.components:
                 thisComponent.tStart = None
                 thisComponent.tStop = None
                 thisComponent.tStartRefresh = None
@@ -3015,9 +3426,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             _timeToFirstFrame = win.getFutureFlipTime(clock="now")
             frameN = -1
             
-            # --- Run Routine "rr_dprime" ---
-            thisExp.currentRoutine = rr_dprime
-            rr_dprime.forceEnded = routineForceEnded = not continueRoutine
+            # --- Run Routine "rr_rating" ---
+            thisExp.currentRoutine = rr_rating
+            rr_rating.forceEnded = routineForceEnded = not continueRoutine
             while continueRoutine:
                 # if trial has changed, end Routine now
                 if hasattr(thisOo_level, 'status') and thisOo_level.status == STOPPING:
@@ -3028,54 +3439,149 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 tThisFlipGlobal = win.getFutureFlipTime(clock=None)
                 frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
                 # update/draw components on each frame
+                # Run 'Each Frame' code from rating_code
+                # Check whether experimenter has entered both ratings
+                is_ratings_complete = (
+                    rating_physical.getRating() is not None and
+                    rating_cognitive.getRating() is not None
+                )
                 
-                # *feedback_keyboard* updates
-                waitOnFlip = False
+                # *rating_dprime_text* updates
                 
-                # if feedback_keyboard is starting this frame...
-                if feedback_keyboard.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                # if rating_dprime_text is starting this frame...
+                if rating_dprime_text.status == NOT_STARTED and tThisFlip >= 0-frameTolerance:
                     # keep track of start time/frame for later
-                    feedback_keyboard.frameNStart = frameN  # exact frame index
-                    feedback_keyboard.tStart = t  # local t and not account for scr refresh
-                    feedback_keyboard.tStartRefresh = tThisFlipGlobal  # on global time
-                    win.timeOnFlip(feedback_keyboard, 'tStartRefresh')  # time at next scr refresh
+                    rating_dprime_text.frameNStart = frameN  # exact frame index
+                    rating_dprime_text.tStart = t  # local t and not account for scr refresh
+                    rating_dprime_text.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(rating_dprime_text, 'tStartRefresh')  # time at next scr refresh
                     # add timestamp to datafile
-                    thisExp.timestampOnFlip(win, 'feedback_keyboard.started')
+                    thisExp.timestampOnFlip(win, 'rating_dprime_text.started')
                     # update status
-                    feedback_keyboard.status = STARTED
-                    # keyboard checking is just starting
-                    waitOnFlip = True
-                    win.callOnFlip(feedback_keyboard.clock.reset)  # t=0 on next screen flip
-                    win.callOnFlip(feedback_keyboard.clearEvents, eventType='keyboard')  # clear events on next screen flip
-                if feedback_keyboard.status == STARTED and not waitOnFlip:
-                    theseKeys = feedback_keyboard.getKeys(keyList=['space'], ignoreKeys=["escape"], waitRelease=False)
-                    _feedback_keyboard_allKeys.extend(theseKeys)
-                    if len(_feedback_keyboard_allKeys):
-                        feedback_keyboard.keys = _feedback_keyboard_allKeys[-1].name  # just the last key pressed
-                        feedback_keyboard.rt = _feedback_keyboard_allKeys[-1].rt
-                        feedback_keyboard.duration = _feedback_keyboard_allKeys[-1].duration
-                        # a response ends the routine
-                        continueRoutine = False
+                    rating_dprime_text.status = STARTED
+                    rating_dprime_text.setAutoDraw(True)
                 
-                # *feedback_display* updates
-                
-                # if feedback_display is starting this frame...
-                if feedback_display.status == NOT_STARTED and tThisFlip >= 0-frameTolerance:
-                    # keep track of start time/frame for later
-                    feedback_display.frameNStart = frameN  # exact frame index
-                    feedback_display.tStart = t  # local t and not account for scr refresh
-                    feedback_display.tStartRefresh = tThisFlipGlobal  # on global time
-                    win.timeOnFlip(feedback_display, 'tStartRefresh')  # time at next scr refresh
-                    # add timestamp to datafile
-                    thisExp.timestampOnFlip(win, 'feedback_display.started')
-                    # update status
-                    feedback_display.status = STARTED
-                    feedback_display.setAutoDraw(True)
-                
-                # if feedback_display is active this frame...
-                if feedback_display.status == STARTED:
+                # if rating_dprime_text is active this frame...
+                if rating_dprime_text.status == STARTED:
                     # update params
                     pass
+                
+                # *rating_physical_text* updates
+                
+                # if rating_physical_text is starting this frame...
+                if rating_physical_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # keep track of start time/frame for later
+                    rating_physical_text.frameNStart = frameN  # exact frame index
+                    rating_physical_text.tStart = t  # local t and not account for scr refresh
+                    rating_physical_text.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(rating_physical_text, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'rating_physical_text.started')
+                    # update status
+                    rating_physical_text.status = STARTED
+                    rating_physical_text.setAutoDraw(True)
+                
+                # if rating_physical_text is active this frame...
+                if rating_physical_text.status == STARTED:
+                    # update params
+                    pass
+                
+                # *rating_physical* updates
+                
+                # if rating_physical is starting this frame...
+                if rating_physical.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # keep track of start time/frame for later
+                    rating_physical.frameNStart = frameN  # exact frame index
+                    rating_physical.tStart = t  # local t and not account for scr refresh
+                    rating_physical.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(rating_physical, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'rating_physical.started')
+                    # update status
+                    rating_physical.status = STARTED
+                    rating_physical.setAutoDraw(True)
+                
+                # if rating_physical is active this frame...
+                if rating_physical.status == STARTED:
+                    # update params
+                    pass
+                
+                # *rating_cognitive_text* updates
+                
+                # if rating_cognitive_text is starting this frame...
+                if rating_cognitive_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # keep track of start time/frame for later
+                    rating_cognitive_text.frameNStart = frameN  # exact frame index
+                    rating_cognitive_text.tStart = t  # local t and not account for scr refresh
+                    rating_cognitive_text.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(rating_cognitive_text, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'rating_cognitive_text.started')
+                    # update status
+                    rating_cognitive_text.status = STARTED
+                    rating_cognitive_text.setAutoDraw(True)
+                
+                # if rating_cognitive_text is active this frame...
+                if rating_cognitive_text.status == STARTED:
+                    # update params
+                    pass
+                
+                # *rating_cognitive* updates
+                
+                # if rating_cognitive is starting this frame...
+                if rating_cognitive.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # keep track of start time/frame for later
+                    rating_cognitive.frameNStart = frameN  # exact frame index
+                    rating_cognitive.tStart = t  # local t and not account for scr refresh
+                    rating_cognitive.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(rating_cognitive, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'rating_cognitive.started')
+                    # update status
+                    rating_cognitive.status = STARTED
+                    rating_cognitive.setAutoDraw(True)
+                
+                # if rating_cognitive is active this frame...
+                if rating_cognitive.status == STARTED:
+                    # update params
+                    pass
+                # *rating_continue_button* updates
+                
+                # if rating_continue_button is starting this frame...
+                if rating_continue_button.status == NOT_STARTED and is_ratings_complete:
+                    # keep track of start time/frame for later
+                    rating_continue_button.frameNStart = frameN  # exact frame index
+                    rating_continue_button.tStart = t  # local t and not account for scr refresh
+                    rating_continue_button.tStartRefresh = tThisFlipGlobal  # on global time
+                    win.timeOnFlip(rating_continue_button, 'tStartRefresh')  # time at next scr refresh
+                    # add timestamp to datafile
+                    thisExp.timestampOnFlip(win, 'rating_continue_button.started')
+                    # update status
+                    rating_continue_button.status = STARTED
+                    win.callOnFlip(rating_continue_button.buttonClock.reset)
+                    rating_continue_button.setAutoDraw(True)
+                
+                # if rating_continue_button is active this frame...
+                if rating_continue_button.status == STARTED:
+                    # update params
+                    pass
+                    # check whether rating_continue_button has been pressed
+                    if rating_continue_button.isClicked:
+                        if not rating_continue_button.wasClicked:
+                            # if this is a new click, store time of first click and clicked until
+                            rating_continue_button.timesOn.append(rating_continue_button.buttonClock.getTime())
+                            rating_continue_button.timesOff.append(rating_continue_button.buttonClock.getTime())
+                        elif len(rating_continue_button.timesOff):
+                            # if click is continuing from last frame, update time of clicked until
+                            rating_continue_button.timesOff[-1] = rating_continue_button.buttonClock.getTime()
+                        if not rating_continue_button.wasClicked:
+                            # end routine when rating_continue_button is clicked
+                            continueRoutine = False
+                        if not rating_continue_button.wasClicked:
+                            # run callback code when rating_continue_button is clicked
+                            pass
+                # take note of whether rating_continue_button was clicked, so that next frame we know if clicks are new
+                rating_continue_button.wasClicked = rating_continue_button.isClicked and rating_continue_button.status == STARTED
                 
                 # check for quit (typically the Esc key)
                 if defaultKeyboard.getKeys(keyList=["escape"]):
@@ -3089,20 +3595,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         thisExp=thisExp, 
                         win=win, 
                         timers=[routineTimer, globalClock], 
-                        currentRoutine=rr_dprime,
+                        currentRoutine=rr_rating,
                     )
                     # skip the frame we paused on
                     continue
                 
                 # has a Component requested the Routine to end?
                 if not continueRoutine:
-                    rr_dprime.forceEnded = routineForceEnded = True
+                    rr_rating.forceEnded = routineForceEnded = True
                 # has the Routine been forcibly ended?
-                if rr_dprime.forceEnded or routineForceEnded:
+                if rr_rating.forceEnded or routineForceEnded:
                     break
                 # has every Component finished?
                 continueRoutine = False
-                for thisComponent in rr_dprime.components:
+                for thisComponent in rr_rating.components:
                     if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
                         continueRoutine = True
                         break  # at least one component has not yet finished
@@ -3111,258 +3617,33 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
                     win.flip()
             
-            # --- Ending Routine "rr_dprime" ---
-            for thisComponent in rr_dprime.components:
+            # --- Ending Routine "rr_rating" ---
+            for thisComponent in rr_rating.components:
                 if hasattr(thisComponent, "setAutoDraw"):
                     thisComponent.setAutoDraw(False)
-            # store stop times for rr_dprime
-            rr_dprime.tStop = globalClock.getTime(format='float')
-            rr_dprime.tStopRefresh = tThisFlipGlobal
-            thisExp.addData('rr_dprime.stopped', rr_dprime.tStop)
-            # check responses
-            if feedback_keyboard.keys in ['', [], None]:  # No response was made
-                feedback_keyboard.keys = None
-            oo_level.addData('feedback_keyboard.keys',feedback_keyboard.keys)
-            if feedback_keyboard.keys != None:  # we had a response
-                oo_level.addData('feedback_keyboard.rt', feedback_keyboard.rt)
-                oo_level.addData('feedback_keyboard.duration', feedback_keyboard.duration)
-            # the Routine "rr_dprime" was not non-slip safe, so reset the non-slip timer
+            # store stop times for rr_rating
+            rr_rating.tStop = globalClock.getTime(format='float')
+            rr_rating.tStopRefresh = tThisFlipGlobal
+            thisExp.addData('rr_rating.stopped', rr_rating.tStop)
+            # Run 'End Routine' code from rating_code
+            # Write trial-level data
+            for palette_idx in range(cur_num_palettes):
+                for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
+                        rows[i]["rpe_cognitive"] = rating_cognitive.getRating()
+                        rows[i]["rpe_physical"]  = rating_physical.getRating()
+            oo_level.addData('rating_physical.response', rating_physical.getRating())
+            oo_level.addData('rating_physical.rt', rating_physical.getRT())
+            oo_level.addData('rating_cognitive.response', rating_cognitive.getRating())
+            oo_level.addData('rating_cognitive.rt', rating_cognitive.getRT())
+            oo_level.addData('rating_continue_button.numClicks', rating_continue_button.numClicks)
+            if rating_continue_button.numClicks:
+               oo_level.addData('rating_continue_button.timesOn', rating_continue_button.timesOn)
+               oo_level.addData('rating_continue_button.timesOff', rating_continue_button.timesOff)
+            else:
+               oo_level.addData('rating_continue_button.timesOn', "")
+               oo_level.addData('rating_continue_button.timesOff', "")
+            # the Routine "rr_rating" was not non-slip safe, so reset the non-slip timer
             routineTimer.reset()
-            
-            # set up handler to look after randomisation of conditions etc
-            oo_slider = data.TrialHandler2(
-                name='oo_slider',
-                nReps=0, 
-                method='sequential', 
-                extraInfo=expInfo, 
-                originPath=-1, 
-                trialList=data.importConditions('oo_slider.xlsx'), 
-                seed=None, 
-                isTrials=True, 
-            )
-            thisExp.addLoop(oo_slider)  # add the loop to the experiment
-            thisOo_slider = oo_slider.trialList[0]  # so we can initialise stimuli with some values
-            # abbreviate parameter names if possible (e.g. rgb = thisOo_slider.rgb)
-            if thisOo_slider != None:
-                for paramName in thisOo_slider:
-                    globals()[paramName] = thisOo_slider[paramName]
-            if thisSession is not None:
-                # if running in a Session with a Liaison client, send data up to now
-                thisSession.sendExperimentData()
-            
-            for thisOo_slider in oo_slider:
-                oo_slider.status = STARTED
-                if hasattr(thisOo_slider, 'status'):
-                    thisOo_slider.status = STARTED
-                currentLoop = oo_slider
-                thisExp.timestampOnFlip(win, 'thisRow.t', format=globalClock.format)
-                if thisSession is not None:
-                    # if running in a Session with a Liaison client, send data up to now
-                    thisSession.sendExperimentData()
-                # abbreviate parameter names if possible (e.g. rgb = thisOo_slider.rgb)
-                if thisOo_slider != None:
-                    for paramName in thisOo_slider:
-                        globals()[paramName] = thisOo_slider[paramName]
-                
-                # --- Prepare to start Routine "rr_rating" ---
-                # create an object to store info about Routine rr_rating
-                rr_rating = data.Routine(
-                    name='rr_rating',
-                    components=[rating_slider, rating_keyboard, rating_display],
-                )
-                rr_rating.status = NOT_STARTED
-                continueRoutine = True
-                # update component parameters for each repeat
-                rating_slider.reset()
-                # create starting attributes for rating_keyboard
-                rating_keyboard.keys = []
-                rating_keyboard.rt = []
-                _rating_keyboard_allKeys = []
-                rating_display.setText(cond_slider)
-                # store start times for rr_rating
-                rr_rating.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
-                rr_rating.tStart = globalClock.getTime(format='float')
-                rr_rating.status = STARTED
-                thisExp.addData('rr_rating.started', rr_rating.tStart)
-                rr_rating.maxDuration = None
-                # keep track of which components have finished
-                rr_ratingComponents = rr_rating.components
-                for thisComponent in rr_rating.components:
-                    thisComponent.tStart = None
-                    thisComponent.tStop = None
-                    thisComponent.tStartRefresh = None
-                    thisComponent.tStopRefresh = None
-                    if hasattr(thisComponent, 'status'):
-                        thisComponent.status = NOT_STARTED
-                # reset timers
-                t = 0
-                _timeToFirstFrame = win.getFutureFlipTime(clock="now")
-                frameN = -1
-                
-                # --- Run Routine "rr_rating" ---
-                thisExp.currentRoutine = rr_rating
-                rr_rating.forceEnded = routineForceEnded = not continueRoutine
-                while continueRoutine:
-                    # if trial has changed, end Routine now
-                    if hasattr(thisOo_slider, 'status') and thisOo_slider.status == STOPPING:
-                        continueRoutine = False
-                    # get current time
-                    t = routineTimer.getTime()
-                    tThisFlip = win.getFutureFlipTime(clock=routineTimer)
-                    tThisFlipGlobal = win.getFutureFlipTime(clock=None)
-                    frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
-                    # update/draw components on each frame
-                    
-                    # *rating_slider* updates
-                    
-                    # if rating_slider is starting this frame...
-                    if rating_slider.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
-                        # keep track of start time/frame for later
-                        rating_slider.frameNStart = frameN  # exact frame index
-                        rating_slider.tStart = t  # local t and not account for scr refresh
-                        rating_slider.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_slider, 'tStartRefresh')  # time at next scr refresh
-                        # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_slider.started')
-                        # update status
-                        rating_slider.status = STARTED
-                        rating_slider.setAutoDraw(True)
-                    
-                    # if rating_slider is active this frame...
-                    if rating_slider.status == STARTED:
-                        # update params
-                        pass
-                    
-                    # *rating_keyboard* updates
-                    waitOnFlip = False
-                    
-                    # if rating_keyboard is starting this frame...
-                    if rating_keyboard.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
-                        # keep track of start time/frame for later
-                        rating_keyboard.frameNStart = frameN  # exact frame index
-                        rating_keyboard.tStart = t  # local t and not account for scr refresh
-                        rating_keyboard.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_keyboard, 'tStartRefresh')  # time at next scr refresh
-                        # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_keyboard.started')
-                        # update status
-                        rating_keyboard.status = STARTED
-                        # keyboard checking is just starting
-                        waitOnFlip = True
-                        win.callOnFlip(rating_keyboard.clock.reset)  # t=0 on next screen flip
-                        win.callOnFlip(rating_keyboard.clearEvents, eventType='keyboard')  # clear events on next screen flip
-                    if rating_keyboard.status == STARTED and not waitOnFlip:
-                        theseKeys = rating_keyboard.getKeys(keyList=['space'], ignoreKeys=["escape"], waitRelease=False)
-                        _rating_keyboard_allKeys.extend(theseKeys)
-                        if len(_rating_keyboard_allKeys):
-                            rating_keyboard.keys = _rating_keyboard_allKeys[-1].name  # just the last key pressed
-                            rating_keyboard.rt = _rating_keyboard_allKeys[-1].rt
-                            rating_keyboard.duration = _rating_keyboard_allKeys[-1].duration
-                            # a response ends the routine
-                            continueRoutine = False
-                    
-                    # *rating_display* updates
-                    
-                    # if rating_display is starting this frame...
-                    if rating_display.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
-                        # keep track of start time/frame for later
-                        rating_display.frameNStart = frameN  # exact frame index
-                        rating_display.tStart = t  # local t and not account for scr refresh
-                        rating_display.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_display, 'tStartRefresh')  # time at next scr refresh
-                        # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_display.started')
-                        # update status
-                        rating_display.status = STARTED
-                        rating_display.setAutoDraw(True)
-                    
-                    # if rating_display is active this frame...
-                    if rating_display.status == STARTED:
-                        # update params
-                        pass
-                    
-                    # check for quit (typically the Esc key)
-                    if defaultKeyboard.getKeys(keyList=["escape"]):
-                        thisExp.status = FINISHED
-                    if thisExp.status == FINISHED or endExpNow:
-                        endExperiment(thisExp, win=win)
-                        return
-                    # pause experiment here if requested
-                    if thisExp.status == PAUSED:
-                        pauseExperiment(
-                            thisExp=thisExp, 
-                            win=win, 
-                            timers=[routineTimer, globalClock], 
-                            currentRoutine=rr_rating,
-                        )
-                        # skip the frame we paused on
-                        continue
-                    
-                    # has a Component requested the Routine to end?
-                    if not continueRoutine:
-                        rr_rating.forceEnded = routineForceEnded = True
-                    # has the Routine been forcibly ended?
-                    if rr_rating.forceEnded or routineForceEnded:
-                        break
-                    # has every Component finished?
-                    continueRoutine = False
-                    for thisComponent in rr_rating.components:
-                        if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
-                            continueRoutine = True
-                            break  # at least one component has not yet finished
-                    
-                    # refresh the screen
-                    if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
-                        win.flip()
-                
-                # --- Ending Routine "rr_rating" ---
-                for thisComponent in rr_rating.components:
-                    if hasattr(thisComponent, "setAutoDraw"):
-                        thisComponent.setAutoDraw(False)
-                # store stop times for rr_rating
-                rr_rating.tStop = globalClock.getTime(format='float')
-                rr_rating.tStopRefresh = tThisFlipGlobal
-                thisExp.addData('rr_rating.stopped', rr_rating.tStop)
-                oo_slider.addData('rating_slider.response', rating_slider.getRating())
-                oo_slider.addData('rating_slider.rt', rating_slider.getRT())
-                # check responses
-                if rating_keyboard.keys in ['', [], None]:  # No response was made
-                    rating_keyboard.keys = None
-                oo_slider.addData('rating_keyboard.keys',rating_keyboard.keys)
-                if rating_keyboard.keys != None:  # we had a response
-                    oo_slider.addData('rating_keyboard.rt', rating_keyboard.rt)
-                    oo_slider.addData('rating_keyboard.duration', rating_keyboard.duration)
-                # Run 'End Routine' code from rating_code
-                # Write trial-level data
-                for palette_idx in range(NUM_PALETTES):
-                    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
-                        if cond_slider == "cognitive":
-                            rows[i]["rpe_cognitive"] = rating_slider.getRating()
-                        elif cond_slider == "physical":
-                            rows[i]["rpe_physical"] = rating_slider.getRating()
-                # the Routine "rr_rating" was not non-slip safe, so reset the non-slip timer
-                routineTimer.reset()
-                # mark thisOo_slider as finished
-                if hasattr(thisOo_slider, 'status'):
-                    thisOo_slider.status = FINISHED
-                # if awaiting a pause, pause now
-                if oo_slider.status == PAUSED:
-                    thisExp.status = PAUSED
-                    pauseExperiment(
-                        thisExp=thisExp, 
-                        win=win, 
-                        timers=[globalClock], 
-                    )
-                    # once done pausing, restore running status
-                    oo_slider.status = STARTED
-                thisExp.nextEntry()
-                
-            # completed 0 repeats of 'oo_slider'
-            oo_slider.status = FINISHED
-            
-            if thisSession is not None:
-                # if running in a Session with a Liaison client, send data up to now
-                thisSession.sendExperimentData()
             # mark thisOo_level as finished
             if hasattr(thisOo_level, 'status'):
                 thisOo_level.status = FINISHED
@@ -3378,7 +3659,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 oo_level.status = STARTED
             thisExp.nextEntry()
             
-        # completed NUM_LEVELS*NUM_LEVELS repeats of 'oo_level'
+        # completed len(blocks[oo_block.thisN]) repeats of 'oo_level'
         oo_level.status = FINISHED
         
         if thisSession is not None:
@@ -3399,7 +3680,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             oo_block.status = STARTED
         thisExp.nextEntry()
         
-    # completed NUM_BLOCKS repeats of 'oo_block'
+    # completed len(blocks) repeats of 'oo_block'
     oo_block.status = FINISHED
     
     if thisSession is not None:

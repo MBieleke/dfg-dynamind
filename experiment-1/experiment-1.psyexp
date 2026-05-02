@@ -68,7 +68,7 @@
     <Param val="1000" valType="num" updates="None" name="plPupilRemoteTimeoutMs"/>
     <Param val="False" valType="bool" updates="None" name="plPupillometryOnly"/>
     <Param val="psychopy_iohub_surface" valType="str" updates="None" name="plSurfaceName"/>
-    <Param val="0" valType="code" updates="None" name="runMode"/>
+    <Param val="1" valType="code" updates="None" name="runMode"/>
     <Param val="False" valType="bool" updates="None" name="rush"/>
     <Param val="time" valType="str" updates="None" name="sortColumns"/>
     <Param val="" valType="str" updates="None" name="tbLicenseFile"/>
@@ -286,9 +286,9 @@
         <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
       </RoutineSettingsComponent>
       <CodeComponent name="setup_constants" plugin="None">
-        <Param val="# IMPORT MODULES ----&amp;#10;import random&amp;#10;import math&amp;#10;import numpy as np&amp;#10;import sounddevice as sd&amp;#10;import threading&amp;#10;import pandas as pd&amp;#10;&amp;#10;# IMPORT SUBMODULES ----&amp;#10;# from scipy.stats import truncnorm, nur bei truncated normal distribution&amp;#10;from psychopy.colors import Color&amp;#10;from scipy.stats import norm&amp;#10;from itertools import product&amp;#10;from openpyxl import Workbook&amp;#10;from openpyxl.styles import PatternFill" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="# IMPORT MODULES ----&amp;#10;import random&amp;#10;import math&amp;#10;import numpy as np&amp;#10;import sounddevice as sd&amp;#10;import threading&amp;#10;import pandas as pd&amp;#10;from collections import deque&amp;#10;&amp;#10;# IMPORT SUBMODULES ----&amp;#10;# from scipy.stats import truncnorm, nur bei truncated normal distribution&amp;#10;from psychopy.colors import Color&amp;#10;from scipy.stats import norm&amp;#10;from itertools import product&amp;#10;from openpyxl import Workbook&amp;#10;from openpyxl.styles import PatternFill&amp;#10;import statistics" valType="extendedCode" updates="constant" name="Before Experiment"/>
         <Param val="import * as random from 'random';&amp;#10;import * as math from 'math';&amp;#10;import * as np from 'numpy';&amp;#10;import * as sd from 'sounddevice';&amp;#10;import * as threading from 'threading';&amp;#10;import {Color} from 'psychopy/colors';&amp;#10;import {norm} from 'scipy/stats';&amp;#10;import {product} from 'itertools';&amp;#10;" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
-        <Param val="# DEFINITIONS AND CONSTANTS ----&amp;#10;NUM_MVC         = 3  # How many MVC trials to conduct&amp;#10;NUM_BLOCKS      = 3  # How often each block within the domain is repeated&amp;#10;NUM_LEVELS      = 4  # How often each level within the block is repeated&amp;#10;NUM_PALETTES    = 10 # How many palettes are generated per trial&amp;#10;NUM_TARGETS     = 4  # How many targets appear in NUM_PALETTES palettes&amp;#10;NUM_DISTRACTORS = 8&amp;#10;&amp;#10;# MIN, MAX, AND RANGE OF COGNITIVE AND PHYSICAL DEMAND&amp;#10;PHYSICAL_DEMAND_MIN     = 0.03&amp;#10;PHYSICAL_DEMAND_MAX     = 0.40&amp;#10;COGNITIVE_DEMAND_MIN    = 70&amp;#10;COGNITIVE_DEMAND_MAX    = 10&amp;#10;PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()&amp;#10;COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()&amp;#10;&amp;#10;TOLERANCE = 15.0&amp;#10;&amp;#10;# TARGET COLORS ----&amp;#10;TARGET_COLORS_RGB255 = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]&amp;#10;COLOR_NAMES = {&amp;#10;    (255, 0, 0):   &quot;Red&quot;,&amp;#10;    (0, 255, 0):   &quot;Green&quot;,&amp;#10;    (0, 0, 255):   &quot;Blue&quot;,&amp;#10;}&amp;#10;&amp;#10;INNER_HOLES = list(range(8))&amp;#10;OUTER_HOLES = list(range(9, 21))&amp;#10;&amp;#10;# TIMING CONSTANTS ----&amp;#10;PALETTE_DURATION_SEC = 0.416&amp;#10;COUNTDOWN_STEP_SEC = 0.5&amp;#10;&amp;#10;# AUDIO CONSTANTS ----&amp;#10;FS          = 48000&amp;#10;CHANNELS    = 1&amp;#10;FREQ_LOW    = 440.0&amp;#10;FREQ_HIGH   = 880.0&amp;#10;AMP_MAX     = 1.0&amp;#10;AMP_SMOOTH  = 0.1&amp;#10;STATE_HOLD  = 0.1" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="# DEFINITIONS AND CONSTANTS ----&amp;#10;NUM_MVC               = 3      # How many MVC trials to conduct&amp;#10;NUM_BLOCKS            = 3      # How often each block within the domain is repeated&amp;#10;NUM_LEVELS            = 4      # How often each level within the block is repeated&amp;#10;NUM_PALETTES_EXERCISE = 10     # for practice trials&amp;#10;NUM_PALETTES_REGULAR  = 24     # for main trials&amp;#10;NUM_TARGETS           = 4      # How many targets appear in NUM_PALETTES palettes&amp;#10;NUM_DISTRACTORS       = 8&amp;#10;NON_TARGET_PALETTES   = [2, 2] # the first and last x palettes that never contain a target&amp;#10;&amp;#10;# MIN, MAX, AND RANGE OF COGNITIVE AND PHYSICAL DEMAND&amp;#10;PHYSICAL_DEMAND_MIN     = 0.03&amp;#10;PHYSICAL_DEMAND_MAX     = 0.40&amp;#10;COGNITIVE_DEMAND_MIN    = 70&amp;#10;COGNITIVE_DEMAND_MAX    = 10&amp;#10;PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()&amp;#10;COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()&amp;#10;&amp;#10;TOLERANCE = 15.0&amp;#10;FORCE_BUFFER_LENGTH = 10&amp;#10;FORCE_TOLERANCE_BUFFER = deque(maxlen = FORCE_BUFFER_LENGTH)&amp;#10;&amp;#10;def force_nrmse(force_samples, target_force):&amp;#10;    &quot;&quot;&quot;&amp;#10;    Normalized RMSE of force relative to target.&amp;#10;    Returns a percentage (e.g., 10% deviation from target).&amp;#10;    &quot;&quot;&quot;&amp;#10;    force = np.asarray(force_samples)&amp;#10;    rmse  = np.sqrt(np.mean((force - target_force) ** 2))&amp;#10;    return round((rmse / target_force) * 100, 2)&amp;#10;&amp;#10;def force_bias(force_samples, target_force):&amp;#10;    &quot;&quot;&quot;&amp;#10;    Mean signed deviation as a percentage of target.&amp;#10;    Positive = pressed too hard on average, negative = too soft.&amp;#10;    &quot;&quot;&quot;&amp;#10;    force = np.asarray(force_samples)&amp;#10;    return round((np.mean(force - target_force) / target_force) * 100, 2)&amp;#10;&amp;#10;def force_pct_in_range(force_samples, target_force, tolerance=TOLERANCE):&amp;#10;    &quot;&quot;&quot;&amp;#10;    Percentage of samples within ±tolerance Newtons of target.&amp;#10;    &quot;&quot;&quot;&amp;#10;    force = np.asarray(force_samples)&amp;#10;    lower = target_force - tolerance&amp;#10;    upper = target_force + tolerance&amp;#10;    return round(np.mean((force &gt;= lower) &amp; (force &lt;= upper)) * 100, 2)&amp;#10;&amp;#10;# TARGET COLORS ----&amp;#10;TARGET_COLORS_RGB255 = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]&amp;#10;COLOR_NAMES = {&amp;#10;    (255, 0, 0):   &quot;Red&quot;,&amp;#10;    (0, 255, 0):   &quot;Green&quot;,&amp;#10;    (0, 0, 255):   &quot;Blue&quot;,&amp;#10;}&amp;#10;&amp;#10;INNER_HOLES = list(range(8))&amp;#10;OUTER_HOLES = list(range(9, 21))&amp;#10;&amp;#10;# TIMING CONSTANTS ----&amp;#10;PALETTE_DURATION_SEC = 0.416&amp;#10;COUNTDOWN_STEP_SEC = 0.5&amp;#10;&amp;#10;# AUDIO CONSTANTS ----&amp;#10;FS          = 48000&amp;#10;CHANNELS    = 1&amp;#10;FREQ_LOW    = 440.0&amp;#10;FREQ_HIGH   = 880.0&amp;#10;AMP_MAX     = 1.0&amp;#10;AMP_SMOOTH  = 0.1&amp;#10;STATE_HOLD  = 0.1" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin Routine"/>
@@ -322,7 +322,7 @@
       <CodeComponent name="setup_audio" plugin="None">
         <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
-        <Param val="global _state_lock, _target_freq, _target_amp, _cur_amp, _phase, _stream&amp;#10;&amp;#10;# Audio parameters&amp;#10;FS          = 48000&amp;#10;CHANNELS    = 1&amp;#10;FREQ_LOW    = 440.0&amp;#10;FREQ_HIGH   = 880.0&amp;#10;AMP_MAX     = 1.0&amp;#10;AMP_SMOOTH  = 0.1&amp;#10;STATE_HOLD  = 0.1&amp;#10;&amp;#10;# Shared state&amp;#10;_state_lock  = threading.Lock()&amp;#10;_target_freq = FREQ_LOW&amp;#10;_target_amp  = 0.0&amp;#10;_cur_amp     = 0.0&amp;#10;_phase       = 0.0&amp;#10;&amp;#10;def audio_callback(outdata, frames, time, status):&amp;#10;    global _phase, _cur_amp, _target_amp, _target_freq&amp;#10;    with _state_lock:&amp;#10;        tf = float(_target_freq)&amp;#10;        ta = float(_target_amp)&amp;#10;    _cur_amp  = (1.0 - AMP_SMOOTH) * _cur_amp + AMP_SMOOTH * ta&amp;#10;    t         = (np.arange(frames) / FS).astype(np.float32)&amp;#10;    phase_inc = 2.0 * np.pi * tf&amp;#10;    y         = np.sin(_phase + phase_inc * t).astype(np.float32)&amp;#10;    _phase    = float((_phase + phase_inc * (frames / FS)) % (2.0 * np.pi))&amp;#10;    outdata[:] = (_cur_amp * AMP_MAX * y).reshape(-1, 1)&amp;#10;&amp;#10;_stream = sd.OutputStream(&amp;#10;    samplerate = FS,&amp;#10;    channels   = CHANNELS,&amp;#10;    dtype      = &quot;float32&quot;,&amp;#10;    callback   = audio_callback,&amp;#10;)&amp;#10;if not _stream.active:&amp;#10;    _stream.start()&amp;#10;&amp;#10;# Keep stream running, but force target signal to silence&amp;#10;def mute_audio():&amp;#10;    global _target_amp, _target_freq&amp;#10;    with _state_lock:&amp;#10;        _target_amp = 0.0&amp;#10;        _target_freq = FREQ_LOW" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="global _state_lock, _target_freq, _target_amp, _cur_amp, _phase, _stream&amp;#10;&amp;#10;# Audio parameters&amp;#10;FS          = 48000&amp;#10;CHANNELS    = 1&amp;#10;FREQ_LOW    = 440.0&amp;#10;FREQ_HIGH   = 880.0&amp;#10;AMP_MAX     = 1.0&amp;#10;AMP_SMOOTH  = 0.1&amp;#10;STATE_HOLD  = 0.1&amp;#10;&amp;#10;# Shared state&amp;#10;_state_lock  = threading.Lock()&amp;#10;_target_freq = FREQ_LOW&amp;#10;_target_amp  = 0.0&amp;#10;_cur_amp     = 0.0&amp;#10;_phase       = 0.0&amp;#10;&amp;#10;def audio_callback(outdata, frames, time, status):&amp;#10;    global _phase, _cur_amp, _target_amp, _target_freq&amp;#10;    with _state_lock:&amp;#10;        tf = float(_target_freq)&amp;#10;        ta = float(_target_amp)&amp;#10;    _cur_amp  = (1.0 - AMP_SMOOTH) * _cur_amp + AMP_SMOOTH * ta&amp;#10;    t         = (np.arange(frames) / FS).astype(np.float32)&amp;#10;    phase_inc = 2.0 * np.pi * tf&amp;#10;    y         = np.sin(_phase + phase_inc * t).astype(np.float32)&amp;#10;    _phase    = float((_phase + phase_inc * (frames / FS)) % (2.0 * np.pi))&amp;#10;    outdata[:] = (_cur_amp * AMP_MAX * y).reshape(-1, 1)&amp;#10;&amp;#10;_stream = sd.OutputStream(&amp;#10;    samplerate = FS,&amp;#10;    channels   = CHANNELS,&amp;#10;    dtype      = &quot;float32&quot;,&amp;#10;    callback   = audio_callback,&amp;#10;)&amp;#10;if not _stream.active:&amp;#10;    _stream.start()&amp;#10;&amp;#10;# Keep stream running, but force target signal to silence&amp;#10;def mute_audio():&amp;#10;    global _target_amp, _target_freq&amp;#10;    with _state_lock:&amp;#10;        _target_amp = 0.0&amp;#10;        _target_freq = FREQ_LOW&amp;#10;&amp;#10;def deviation_to_interval(deviation, min_dev = TOLERANCE, max_dev = TOLERANCE*2):&amp;#10;    &quot;&quot;&quot;Maps deviation to beep interval in seconds. Outside range = no beep.&quot;&quot;&quot;&amp;#10;    if deviation &lt; min_dev:&amp;#10;        return None  # in zone, silent&amp;#10;    # clamp to max_dev, then map to interval range&amp;#10;    dev_clamped = min(deviation, max_dev)&amp;#10;    # linear map: 15N -&gt; 1.0s interval, 30N -&gt; 0.2s interval&amp;#10;    t = (dev_clamped - min_dev) / (max_dev - min_dev)  # 0.0 to 1.0&amp;#10;    return 1.0 - t * 0.8" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin Routine"/>
@@ -339,7 +339,7 @@
       <CodeComponent name="setup_random" plugin="None">
         <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
-        <Param val="# =============================================================================&amp;#10;# PALETTE GENERATION&amp;#10;# =============================================================================&amp;#10;def generate_trial_palettes(target_color_rgb255, cognitive_demand_level,&amp;#10;                             n_palettes = NUM_PALETTES, n_targets = NUM_TARGETS,&amp;#10;                             n_holes = NUM_DISTRACTORS):&amp;#10;    &quot;&quot;&quot;&amp;#10;    Generate all palettes for one trial.&amp;#10;    - n_targets palettes contain the target color at a random hole position&amp;#10;    - remaining palettes contain only distractors&amp;#10;    &quot;&quot;&quot;&amp;#10;    target_palette_indices = set(random.sample(range(n_palettes), n_targets))&amp;#10;&amp;#10;    palettes = []&amp;#10;    for i in range(n_palettes):&amp;#10;        if i in target_palette_indices:&amp;#10;            distractors = generate_distractors(target_color_rgb255, cognitive_demand_level, n=n_holes - 1)&amp;#10;            target_pos  = random.randint(0, n_holes - 1)&amp;#10;            palette     = distractors.copy()&amp;#10;            palette.insert(target_pos, target_color_rgb255)&amp;#10;        else:&amp;#10;            palette = generate_distractors(target_color_rgb255, cognitive_demand_level, n=n_holes)&amp;#10;        palettes.append(palette)&amp;#10;&amp;#10;    return palettes&amp;#10;&amp;#10;# =============================================================================&amp;#10;# CREATE TRIALS&amp;#10;# =============================================================================&amp;#10;def make_trial(physical_demand_level, cognitive_demand_level, target_color_rgb255, phase):&amp;#10;    return {&amp;#10;        &quot;physical_demand_level&quot;:  physical_demand_level,&amp;#10;        &quot;cognitive_demand_level&quot;: cognitive_demand_level,&amp;#10;        &quot;target_color_rgb255&quot;:    target_color_rgb255,&amp;#10;        &quot;phase&quot;:                  phase,&amp;#10;    }&amp;#10;&amp;#10;# Practice 1: Low cognitive and low physical demand&amp;#10;practice_neutral = [&amp;#10;    make_trial(&amp;#10;        physical_demand_level  = PHYSICAL_DEMAND_MIN,&amp;#10;        cognitive_demand_level = COGNITIVE_DEMAND_MIN,&amp;#10;        target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),&amp;#10;        phase                  = &quot;practice_neutral&quot;,&amp;#10;    )&amp;#10;]&amp;#10;&amp;#10;# Practice 2: Increasing cognitive and low physical demand&amp;#10;practice_cognitive = [&amp;#10;    make_trial(&amp;#10;        physical_demand_level  = PHYSICAL_DEMAND_MIN,&amp;#10;        cognitive_demand_level = demand,&amp;#10;        target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),&amp;#10;        phase                  = &quot;practice_cognitive&quot;,&amp;#10;    )&amp;#10;    for demand in COGNITIVE_DEMAND_LEVELS&amp;#10;]&amp;#10;&amp;#10;# Practice 3: Low cognitive and increasing physical demand&amp;#10;practice_physical = [&amp;#10;    make_trial(&amp;#10;        physical_demand_level  = demand,&amp;#10;        cognitive_demand_level = COGNITIVE_DEMAND_MIN,&amp;#10;        target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),&amp;#10;        phase                  = &quot;practice_physical&quot;,&amp;#10;    )&amp;#10;    for demand in PHYSICAL_DEMAND_LEVELS&amp;#10;]&amp;#10;&amp;#10;practice_blocks = [practice_neutral, practice_cognitive, practice_physical]&amp;#10;&amp;#10;# Main experiment blocks&amp;#10;main_blocks = {b: [] for b in range(NUM_BLOCKS)}&amp;#10;for physical_demand_level, cognitive_demand_level in product(PHYSICAL_DEMAND_LEVELS, COGNITIVE_DEMAND_LEVELS):&amp;#10;    for block, target_color_rgb255 in zip(main_blocks, random.sample(TARGET_COLORS_RGB255, 3)):&amp;#10;        main_blocks[block].append(&amp;#10;            make_trial(&amp;#10;                physical_demand_level=physical_demand_level,&amp;#10;                cognitive_demand_level=cognitive_demand_level,&amp;#10;                target_color_rgb255=target_color_rgb255,&amp;#10;                phase=&quot;main&quot;,&amp;#10;            )&amp;#10;        )&amp;#10;&amp;#10;for block in main_blocks.values():&amp;#10;    random.shuffle(block)&amp;#10;&amp;#10;# Randomized main blocks, practice blocks always come first&amp;#10;main_block_order = list(main_blocks.keys())&amp;#10;random.shuffle(main_block_order)&amp;#10;&amp;#10;# Final list of blocks&amp;#10;blocks = []&amp;#10;blocks.extend(practice_blocks)&amp;#10;for b in main_block_order:&amp;#10;    blocks.append(main_blocks[b])&amp;#10;&amp;#10;# =============================================================================&amp;#10;# CREATE PALETTES&amp;#10;# =============================================================================&amp;#10;for b, trials in enumerate(blocks):&amp;#10;    for trial in trials:&amp;#10;        palettes = generate_trial_palettes(&amp;#10;            target_color_rgb255    = trial[&quot;target_color_rgb255&quot;],&amp;#10;            cognitive_demand_level = trial[&quot;cognitive_demand_level&quot;],&amp;#10;        )&amp;#10;        target = trial[&quot;target_color_rgb255&quot;]&amp;#10;        target_palettes = [i for i, p in enumerate(palettes) if target in p]&amp;#10;        target_holes    = [p.index(target) for i, p in enumerate(palettes) if target in p]&amp;#10;        &amp;#10;        trial[&quot;palettes&quot;]            = palettes&amp;#10;        trial[&quot;palette_has_target&quot;]  = [target in p for p in palettes]&amp;#10;        trial[&quot;palette_target_hole&quot;] = [p.index(target) if target in p else None for p in palettes]&amp;#10;&amp;#10;# =============================================================================&amp;#10;# BALANCE CHECK&amp;#10;# =============================================================================&amp;#10;all_trials = []&amp;#10;for b, trials in enumerate(blocks):&amp;#10;    for t in trials:&amp;#10;        all_trials.append({**{k: v for k, v in t.items() if k != &quot;palettes&quot;}, &quot;block&quot;: b})&amp;#10;df_check = pd.DataFrame(all_trials)&amp;#10;df_check[&quot;color&quot;] = df_check[&quot;target_color_rgb255&quot;].apply(tuple)&amp;#10;&amp;#10;lines = [&quot;=&quot; * 50, &quot;TRIAL BALANCE CHECK&quot;, &quot;=&quot; * 50]&amp;#10;for factor in [&quot;physical_demand_level&quot;, &quot;cognitive_demand_level&quot;, &quot;color&quot;]:&amp;#10;    lines.append(f&quot;\n--- {factor} ---&quot;)&amp;#10;    table = df_check.groupby([&quot;block&quot;, factor]).size().unstack(fill_value=0)&amp;#10;    lines.append(table.to_string())&amp;#10;    lines.append(f&quot;Totals: {df_check[factor].value_counts().sort_index().to_dict()}&quot;)&amp;#10;lines.append(&quot;\nTotal trials per block:&quot;)&amp;#10;lines.append(df_check.groupby(&quot;block&quot;).size().to_string())&amp;#10;print(&quot;\n&quot;.join(lines))&amp;#10;&amp;#10;# =============================================================================&amp;#10;# BUILD LONG FORMAT ROWS&amp;#10;# =============================================================================&amp;#10;rows = []&amp;#10;for b, trials in enumerate(blocks):&amp;#10;    for trial_idx, trial in enumerate(trials):&amp;#10;        for palette_idx, palette in enumerate(trial[&quot;palettes&quot;]):&amp;#10;            has_target = trial[&quot;target_color_rgb255&quot;] in palette&amp;#10;            for hole_idx, color in enumerate(palette):&amp;#10;                rows.append({&amp;#10;                    &quot;block&quot;:                  b,&amp;#10;                    &quot;trial_idx&quot;:              trial_idx,&amp;#10;                    &quot;mvc&quot;:                    None,&amp;#10;                    &quot;physical_demand_level&quot;:  trial[&quot;physical_demand_level&quot;],&amp;#10;                    &quot;cognitive_demand_level&quot;: trial[&quot;cognitive_demand_level&quot;],&amp;#10;                    &quot;target_color_rgb255&quot;:    trial[&quot;target_color_rgb255&quot;],&amp;#10;                    &quot;palette_idx&quot;:            palette_idx,&amp;#10;                    &quot;is_target_palette&quot;:      has_target,&amp;#10;                    &quot;hole_idx&quot;:               hole_idx,&amp;#10;                    &quot;hole_color_rgb255&quot;:      color,&amp;#10;                    &quot;is_target_hole&quot;:         color == trial[&quot;target_color_rgb255&quot;],&amp;#10;                    # Placeholders for data&amp;#10;                    &quot;is_selected&quot;:              None,&amp;#10;                    &quot;selected_rt&quot;:              None,&amp;#10;                    &quot;is_hit&quot;:                   None,&amp;#10;                    &quot;is_false_alarm&quot;:           None,&amp;#10;                    &quot;is_miss&quot;:                  None,&amp;#10;                    &quot;is_correct_rejection&quot;:     None,&amp;#10;                    &quot;hits&quot;:                     None,&amp;#10;                    &quot;false_alarms&quot;:             None,&amp;#10;                    &quot;misses&quot;:                   None,&amp;#10;                    &quot;correct_rejections&quot;:       None,&amp;#10;                    &quot;d_prime&quot;:                  None&amp;#10;                })&amp;#10;&amp;#10;# Create an index for fast lookup&amp;#10;row_index = {}&amp;#10;palette_row_index = {}&amp;#10;for i, row in enumerate(rows):&amp;#10;    hole_key = (row[&quot;block&quot;], row[&quot;trial_idx&quot;], row[&quot;palette_idx&quot;], row[&quot;hole_idx&quot;])&amp;#10;    row_index[hole_key] = i&amp;#10;    palette_key = (row[&quot;block&quot;], row[&quot;trial_idx&quot;], row[&quot;palette_idx&quot;])&amp;#10;    if palette_key not in palette_row_index:&amp;#10;        palette_row_index[palette_key] = []&amp;#10;    palette_row_index[palette_key].append(i)&amp;#10;&amp;#10;pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="# =============================================================================&amp;#10;# PALETTE GENERATION&amp;#10;# =============================================================================&amp;#10;def generate_trial_palettes(target_color_rgb255, cognitive_demand_level,&amp;#10;                             n_palettes, n_targets = NUM_TARGETS,&amp;#10;                             n_holes = NUM_DISTRACTORS, non_target_palettes = NON_TARGET_PALETTES):&amp;#10;    &quot;&quot;&quot;&amp;#10;    Generate all palettes for one trial.&amp;#10;    - n_targets palettes contain the target color at a random hole position&amp;#10;    - remaining palettes contain only distractors&amp;#10;    &quot;&quot;&quot;&amp;#10;    available = n_palettes - sum(non_target_palettes)&amp;#10;    if available &lt; n_targets:&amp;#10;        raise ValueError(&amp;#10;            f&quot;n_palettes={n_palettes} is too small to place {n_targets} target(s): &quot;&amp;#10;            f&quot;only {available} eligible position(s) available (need at least {n_targets + non_target_palettes}).&quot;&amp;#10;        )&amp;#10;    &amp;#10;    # Never show target in the first or last two palettes&amp;#10;    target_palette_indices = set(random.sample(range(non_target_palettes[0], n_palettes - non_target_palettes[1]), n_targets))&amp;#10;&amp;#10;    palettes = []&amp;#10;    for i in range(n_palettes):&amp;#10;        if i in target_palette_indices:&amp;#10;            distractors = generate_distractors(target_color_rgb255, cognitive_demand_level, n=n_holes - 1)&amp;#10;            target_pos  = random.randint(0, n_holes - 1)&amp;#10;            palette     = distractors.copy()&amp;#10;            palette.insert(target_pos, target_color_rgb255)&amp;#10;        else:&amp;#10;            palette = generate_distractors(target_color_rgb255, cognitive_demand_level, n=n_holes)&amp;#10;        palettes.append(palette)&amp;#10;&amp;#10;    return palettes&amp;#10;&amp;#10;# =============================================================================&amp;#10;# CREATE TRIALS&amp;#10;# =============================================================================&amp;#10;def make_trial(physical_demand_level, cognitive_demand_level, target_color_rgb255, phase, num_palettes):&amp;#10;    return {&amp;#10;        &quot;physical_demand_level&quot;:  physical_demand_level,&amp;#10;        &quot;cognitive_demand_level&quot;: cognitive_demand_level,&amp;#10;        &quot;target_color_rgb255&quot;:    target_color_rgb255,&amp;#10;        &quot;phase&quot;:                  phase,&amp;#10;        &quot;num_palettes&quot;:           num_palettes&amp;#10;    }&amp;#10;&amp;#10;# Practice 1: Low cognitive and low physical demand&amp;#10;practice_neutral = [&amp;#10;    make_trial(&amp;#10;        physical_demand_level  = PHYSICAL_DEMAND_MIN,&amp;#10;        cognitive_demand_level = COGNITIVE_DEMAND_MIN,&amp;#10;        target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),&amp;#10;        phase                  = &quot;practice_neutral&quot;,&amp;#10;        num_palettes           = NUM_PALETTES_EXERCISE&amp;#10;    )&amp;#10;]&amp;#10;&amp;#10;# Practice 2: Increasing cognitive and low physical demand&amp;#10;practice_cognitive = [&amp;#10;    make_trial(&amp;#10;        physical_demand_level  = PHYSICAL_DEMAND_MIN,&amp;#10;        cognitive_demand_level = demand,&amp;#10;        target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),&amp;#10;        phase                  = &quot;practice_cognitive&quot;,&amp;#10;        num_palettes           = NUM_PALETTES_EXERCISE&amp;#10;    )&amp;#10;    for demand in COGNITIVE_DEMAND_LEVELS&amp;#10;]&amp;#10;&amp;#10;# Practice 3: Low cognitive and increasing physical demand&amp;#10;practice_physical = [&amp;#10;    make_trial(&amp;#10;        physical_demand_level  = demand,&amp;#10;        cognitive_demand_level = COGNITIVE_DEMAND_MIN,&amp;#10;        target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),&amp;#10;        phase                  = &quot;practice_physical&quot;,&amp;#10;        num_palettes           = NUM_PALETTES_EXERCISE&amp;#10;    )&amp;#10;    for demand in PHYSICAL_DEMAND_LEVELS&amp;#10;]&amp;#10;&amp;#10;practice_blocks = [practice_neutral, practice_cognitive, practice_physical]&amp;#10;&amp;#10;# Main experiment blocks&amp;#10;main_blocks = {b: [] for b in range(NUM_BLOCKS)}&amp;#10;for physical_demand_level, cognitive_demand_level in product(PHYSICAL_DEMAND_LEVELS, COGNITIVE_DEMAND_LEVELS):&amp;#10;    for block, target_color_rgb255 in zip(main_blocks, random.sample(TARGET_COLORS_RGB255, 3)):&amp;#10;        main_blocks[block].append(&amp;#10;            make_trial(&amp;#10;                physical_demand_level  = physical_demand_level,&amp;#10;                cognitive_demand_level = cognitive_demand_level,&amp;#10;                target_color_rgb255    = target_color_rgb255,&amp;#10;                phase                  = &quot;main&quot;,&amp;#10;                num_palettes           = NUM_PALETTES_REGULAR&amp;#10;            )&amp;#10;        )&amp;#10;&amp;#10;for block in main_blocks.values():&amp;#10;    random.shuffle(block)&amp;#10;&amp;#10;# Randomized main blocks, practice blocks always come first&amp;#10;main_block_order = list(main_blocks.keys())&amp;#10;random.shuffle(main_block_order)&amp;#10;&amp;#10;# Final list of blocks&amp;#10;blocks = []&amp;#10;blocks.extend(practice_blocks)&amp;#10;for b in main_block_order:&amp;#10;    blocks.append(main_blocks[b])&amp;#10;&amp;#10;# =============================================================================&amp;#10;# CREATE PALETTES&amp;#10;# =============================================================================&amp;#10;for b, trials in enumerate(blocks):&amp;#10;    for trial in trials:&amp;#10;        n_palettes = NUM_PALETTES_EXERCISE if trial[&quot;phase&quot;] != &quot;main&quot; else NUM_PALETTES_REGULAR&amp;#10;        palettes = generate_trial_palettes(&amp;#10;            target_color_rgb255    = trial[&quot;target_color_rgb255&quot;],&amp;#10;            cognitive_demand_level = trial[&quot;cognitive_demand_level&quot;],&amp;#10;            n_palettes              = n_palettes&amp;#10;        )&amp;#10;        target = trial[&quot;target_color_rgb255&quot;]&amp;#10;        target_palettes = [i for i, p in enumerate(palettes) if target in p]&amp;#10;        target_holes    = [p.index(target) for i, p in enumerate(palettes) if target in p]&amp;#10;        &amp;#10;        trial[&quot;palettes&quot;]            = palettes&amp;#10;        trial[&quot;palette_has_target&quot;]  = [target in p for p in palettes]&amp;#10;        trial[&quot;palette_target_hole&quot;] = [p.index(target) if target in p else None for p in palettes]&amp;#10;&amp;#10;# =============================================================================&amp;#10;# BALANCE CHECK&amp;#10;# =============================================================================&amp;#10;all_trials = []&amp;#10;for b, trials in enumerate(blocks):&amp;#10;    for t in trials:&amp;#10;        all_trials.append({**{k: v for k, v in t.items() if k != &quot;palettes&quot;}, &quot;block&quot;: b})&amp;#10;df_check = pd.DataFrame(all_trials)&amp;#10;df_check[&quot;color&quot;] = df_check[&quot;target_color_rgb255&quot;].apply(tuple)&amp;#10;&amp;#10;lines = [&quot;=&quot; * 50, &quot;TRIAL BALANCE CHECK&quot;, &quot;=&quot; * 50]&amp;#10;for factor in [&quot;physical_demand_level&quot;, &quot;cognitive_demand_level&quot;, &quot;color&quot;]:&amp;#10;    lines.append(f&quot;\n--- {factor} ---&quot;)&amp;#10;    table = df_check.groupby([&quot;block&quot;, factor]).size().unstack(fill_value=0)&amp;#10;    lines.append(table.to_string())&amp;#10;    lines.append(f&quot;Totals: {df_check[factor].value_counts().sort_index().to_dict()}&quot;)&amp;#10;lines.append(&quot;\nTotal trials per block:&quot;)&amp;#10;lines.append(df_check.groupby(&quot;block&quot;).size().to_string())&amp;#10;print(&quot;\n&quot;.join(lines))&amp;#10;&amp;#10;# =============================================================================&amp;#10;# BUILD LONG FORMAT ROWS&amp;#10;# =============================================================================&amp;#10;rows = []&amp;#10;for b, trials in enumerate(blocks):&amp;#10;    for trial_idx, trial in enumerate(trials):&amp;#10;        for palette_idx, palette in enumerate(trial[&quot;palettes&quot;]):&amp;#10;            has_target = trial[&quot;target_color_rgb255&quot;] in palette&amp;#10;            for hole_idx, color in enumerate(palette):&amp;#10;                rows.append({&amp;#10;                    &quot;block&quot;:                  b,&amp;#10;                    &quot;trial_idx&quot;:              trial_idx,&amp;#10;                    &quot;mvc&quot;:                    None,&amp;#10;                    &quot;physical_demand_level&quot;:  trial[&quot;physical_demand_level&quot;],&amp;#10;                    &quot;cognitive_demand_level&quot;: trial[&quot;cognitive_demand_level&quot;],&amp;#10;                    &quot;target_color_rgb255&quot;:    trial[&quot;target_color_rgb255&quot;],&amp;#10;                    &quot;num_palettes&quot;:           trial[&quot;num_palettes&quot;],&amp;#10;                    &quot;palette_idx&quot;:            palette_idx,&amp;#10;                    &quot;is_target_palette&quot;:      has_target,&amp;#10;                    &quot;hole_idx&quot;:               hole_idx,&amp;#10;                    &quot;hole_color_rgb255&quot;:      color,&amp;#10;                    &quot;is_target_hole&quot;:         color == trial[&quot;target_color_rgb255&quot;],&amp;#10;                    # Placeholders for data&amp;#10;                    &quot;is_selected&quot;:              None,&amp;#10;                    &quot;selected_rt&quot;:              None,&amp;#10;                    &quot;is_hit&quot;:                   None,&amp;#10;                    &quot;is_false_alarm&quot;:           None,&amp;#10;                    &quot;is_miss&quot;:                  None,&amp;#10;                    &quot;is_correct_rejection&quot;:     None,&amp;#10;                    &quot;hits&quot;:                     None,&amp;#10;                    &quot;false_alarms&quot;:             None,&amp;#10;                    &quot;misses&quot;:                   None,&amp;#10;                    &quot;correct_rejections&quot;:       None,&amp;#10;                    &quot;d_prime&quot;:                  None,&amp;#10;                    &quot;NRMSE&quot;:                    None,&amp;#10;                    &quot;sBias&quot;:                    None,&amp;#10;                    &quot;pTWTR&quot;:                    None&amp;#10;                })&amp;#10;&amp;#10;# Create an index for fast lookup&amp;#10;row_index = {}&amp;#10;palette_row_index = {}&amp;#10;for i, row in enumerate(rows):&amp;#10;    hole_key = (row[&quot;block&quot;], row[&quot;trial_idx&quot;], row[&quot;palette_idx&quot;], row[&quot;hole_idx&quot;])&amp;#10;    row_index[hole_key] = i&amp;#10;    palette_key = (row[&quot;block&quot;], row[&quot;trial_idx&quot;], row[&quot;palette_idx&quot;])&amp;#10;    if palette_key not in palette_row_index:&amp;#10;        palette_row_index[palette_key] = []&amp;#10;    palette_row_index[palette_key].append(i)&amp;#10;&amp;#10;pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)&amp;#10;&amp;#10;# Define some labels for later display&amp;#10;phase_labels = {&amp;#10;    'practice_neutral':  'Practice - Neutral',&amp;#10;    'practice_physical': 'Practice - Physical',&amp;#10;    'practice_cognitive':'Practice - Cognitive',&amp;#10;    'main':              'Main',&amp;#10;}" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin Routine"/>
@@ -396,7 +396,7 @@
         <Param val="cur_mvc = 0;&amp;#10;" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
         <Param val="# Initialize current value of MVC&amp;#10;cur_mvc = maxforce_force.whiteForce = 0&amp;#10;&amp;#10;# Improve display appearance&amp;#10;maxforce_display.alignText = &quot;left&quot;&amp;#10;maxforce_display.bold = True" valType="extendedCode" updates="constant" name="Begin Routine"/>
         <Param val="Py" valType="str" updates="None" name="Code Type"/>
-        <Param val="# Update current MVC value based on dynamometer measurement&amp;#10;cur_mvc = max(cur_mvc, maxforce_force.whiteForce)&amp;#10;&amp;#10;# Update MVC only if we are in a calibration trial&amp;#10;if cond_maxforce_type == &quot;calibration&quot;:&amp;#10;    mvc = max(mvc, cur_mvc)&amp;#10;&amp;#10;# Display text&amp;#10;maxforce_display_text = (&amp;#10;    f&quot;============ TRIAL INFO ============\n&quot;&amp;#10;    f&quot;Trial Type:        {cond_maxforce_type}\n&quot;&amp;#10;    f&quot;Current Force:     {maxforce_force.whiteForce:.2f} N\n&quot;&amp;#10;    f&quot;MVC (cur / max):   {cur_mvc:.2f} / {mvc:.2f} N\n&quot;&amp;#10;    f&quot;====================================\n&quot;&amp;#10;)" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="# Update current MVC value based on dynamometer measurement&amp;#10;cur_mvc = max(cur_mvc, maxforce_force.whiteForce)&amp;#10;&amp;#10;# Update MVC only if we are in a calibration trial&amp;#10;if maxforce_type == &quot;Calibration&quot;:&amp;#10;    mvc = max(mvc, cur_mvc)&amp;#10;&amp;#10;# Display text&amp;#10;maxforce_display_text = (&amp;#10;    f&quot;============ TRIAL INFO ============\n&quot;&amp;#10;    f&quot;Trial Type:        {maxforce_type} ({oo_mvc_rep.thisN+1}/{maxforce_repetitions})\n&quot;&amp;#10;    f&quot;Current Force:     {maxforce_force.whiteForce:.2f} N\n&quot;&amp;#10;    f&quot;MVC (cur / max):   {cur_mvc:.2f} / {mvc:.2f} N\n&quot;&amp;#10;    f&quot;====================================\n&quot;&amp;#10;)" valType="extendedCode" updates="constant" name="Each Frame"/>
         <Param val="/* Syntax Error: Fix Python code */" valType="extendedCode" updates="constant" name="Each JS Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
@@ -431,7 +431,7 @@
         <Param val="False" valType="code" updates="None" plugin="psychopy-apparatus" name="endRoutineOnResponse"/>
         <Param val="maxforce_force" valType="code" updates="None" name="name"/>
         <Param val="60" valType="code" updates="None" name="rate"/>
-        <Param val="&quot;test&quot;" valType="code" updates="None" name="rawDataId"/>
+        <Param val="&quot;calibration&quot;" valType="code" updates="None" name="rawDataId"/>
         <Param val="True" valType="code" updates="None" name="saveRawData"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
@@ -492,14 +492,14 @@
         <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
-        <Param val="# ===== CONDITION SETUP =====&amp;#10;&amp;#10;# Get data for current block and trial&amp;#10;cur_block_trials = blocks[oo_block.thisN]&amp;#10;cur_trial = cur_block_trials[oo_level.thisN]&amp;#10;cur_total_blocks = len(blocks)&amp;#10;cur_trials_in_block = len(cur_block_trials)&amp;#10;&amp;#10;cur_physical_demand_level = cur_trial['physical_demand_level']&amp;#10;cur_cognitive_demand_level = cur_trial['cognitive_demand_level']&amp;#10;cur_target_color_rgb255 = cur_trial['target_color_rgb255']&amp;#10;cur_phase = cur_trial.get('phase', 'main')&amp;#10;&amp;#10;# ===== PERFORMANCE SETUP =====&amp;#10;&amp;#10;# Reset hits/misses/fa/cr for dprime calculation later in slider Routine&amp;#10;hits = misses = false_alarms = correct_rejections = 0&amp;#10;&amp;#10;# =============================================================================&amp;#10;# AUDIO - BEGIN ROUTINE&amp;#10;# =============================================================================&amp;#10;mute_audio()  # Start routine silent&amp;#10;&amp;#10;targetForce     = cur_physical_demand_level * mvc&amp;#10;lower_threshold = max(targetForce - TOLERANCE, 0)&amp;#10;upper_threshold = targetForce + TOLERANCE&amp;#10;&amp;#10;toneState    = 0&amp;#10;_lastSwitchT = -1e9&amp;#10;_last_beep_t = -1e9  # tracks last beep time&amp;#10;&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;&amp;#10;target_display.alignText = &quot;left&quot;&amp;#10;target_display.bold = True&amp;#10;cur_target_color_name = COLOR_NAMES.get(tuple(cur_target_color_rgb255), &quot;Unknown&quot;)&amp;#10;&amp;#10;# Color the display circle&amp;#10;for i, circle in enumerate(hole_stimuli):&amp;#10;    circle.fillColor = cur_target_color_rgb255&amp;#10;&amp;#10;# ===== DATA DUMPING =====&amp;#10;pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="# ===== CONDITION SETUP =====&amp;#10;&amp;#10;# Get data for current block and trial&amp;#10;cur_block_trials = blocks[oo_block.thisN]&amp;#10;cur_trial = cur_block_trials[oo_level.thisN]&amp;#10;cur_total_blocks = len(blocks)&amp;#10;cur_trials_in_block = len(cur_block_trials)&amp;#10;&amp;#10;cur_num_palettes = cur_trial['num_palettes']&amp;#10;cur_physical_demand_level = cur_trial['physical_demand_level']&amp;#10;cur_cognitive_demand_level = cur_trial['cognitive_demand_level']&amp;#10;cur_target_color_rgb255 = cur_trial['target_color_rgb255']&amp;#10;cur_phase = cur_trial.get('phase', 'main')&amp;#10;&amp;#10;# ===== PERFORMANCE SETUP =====&amp;#10;&amp;#10;# Reset hits/misses/fa/cr for dprime calculation later in slider Routine&amp;#10;hits = misses = false_alarms = correct_rejections = 0&amp;#10;&amp;#10;# =============================================================================&amp;#10;# AUDIO - BEGIN ROUTINE&amp;#10;# =============================================================================&amp;#10;mute_audio()  # Start routine silent&amp;#10;proposed = 0  # Start routine within force tolerance&amp;#10;_last_beep_t = 0&amp;#10;&amp;#10;force_nrmse_buffer = []&amp;#10;target_pmvc    = cur_physical_demand_level * mvc&amp;#10;lower_threshold = max(target_pmvc - TOLERANCE, 0)&amp;#10;upper_threshold = target_pmvc + TOLERANCE&amp;#10;&amp;#10;toneState    = 0&amp;#10;_lastSwitchT = -1e9&amp;#10;&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;&amp;#10;target_display.alignText = &quot;left&quot;&amp;#10;target_display.bold = True&amp;#10;cur_target_color_name = COLOR_NAMES.get(tuple(cur_target_color_rgb255), &quot;Unknown&quot;)&amp;#10;&amp;#10;# Color the display circle&amp;#10;for i, circle in enumerate(hole_stimuli):&amp;#10;    circle.fillColor = cur_target_color_rgb255&amp;#10;&amp;#10;# ===== DATA DUMPING =====&amp;#10;pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_design.csv', index=False)" valType="extendedCode" updates="constant" name="Begin Routine"/>
         <Param val="Py" valType="str" updates="None" name="Code Type"/>
-        <Param val="# =============================================================================&amp;#10;# AUDIO - EACH FRAME&amp;#10;# =============================================================================&amp;#10;if target_force.whiteForce is not None:&amp;#10;    if target_force.whiteForce &gt; upper_threshold:&amp;#10;        proposed = 2&amp;#10;    elif target_force.whiteForce &lt; lower_threshold:&amp;#10;        proposed = 1&amp;#10;    else:&amp;#10;        proposed = 0&amp;#10;&amp;#10;    if proposed != toneState and (t - _lastSwitchT) &gt;= STATE_HOLD:&amp;#10;        toneState    = proposed&amp;#10;        _lastSwitchT = t&amp;#10;        if toneState == 2:&amp;#10;            freq, amp = FREQ_HIGH, AMP_MAX&amp;#10;        elif toneState == 1:&amp;#10;            freq, amp = FREQ_LOW, AMP_MAX&amp;#10;        else:&amp;#10;            freq, amp = FREQ_LOW, 0.0&amp;#10;        with _state_lock:&amp;#10;            _target_freq = freq&amp;#10;            _target_amp  = amp&amp;#10;else:&amp;#10;    mute_audio()&amp;#10;    print(&quot;Force is None!&quot;)&amp;#10;&amp;#10;# Create the target display text&amp;#10;if target_force.whiteForce &gt; upper_threshold:&amp;#10;    deviation_symbol = &quot;\u2191\u2191\u2191&quot;  # ↑&amp;#10;elif target_force.whiteForce &lt; lower_threshold:&amp;#10;    deviation_symbol = &quot;\u2193\u2193\u2193&quot;  # ↓&amp;#10;else:&amp;#10;    deviation_symbol = &quot;\u2013\u2013\u2013&quot;  # – (on target)&amp;#10;&amp;#10;target_display_text = (&amp;#10;    f&quot;============ TRIAL INFO ================\n&quot;&amp;#10;    f&quot;BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block} | {cur_phase}\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;Target Color:      {cur_target_color_name}\n&quot;&amp;#10;    f&quot;Physical demand:   {cur_physical_demand_level}\n&quot;&amp;#10;    f&quot;Cognitive demand:  {cur_cognitive_demand_level}\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;MVC:               {mvc:03.0f} N\n&quot;&amp;#10;    f&quot;Target:            {lower_threshold:03.0f} N | {targetForce:03.0f} N | {upper_threshold:03.0f} N\n&quot;&amp;#10;    f&quot;Force:                     {target_force.whiteForce:03.0f} N\n&quot;&amp;#10;    f&quot;Deviation:                 {deviation_symbol}\n&quot;&amp;#10;    f&quot;========================================\n&quot;&amp;#10;)&amp;#10;&amp;#10;# Display monitoring circle&amp;#10;for circle, label in zip(hole_stimuli, hole_labels):&amp;#10;    circle.draw()&amp;#10;    label.draw()" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="# =============================================================================&amp;#10;# AUDIO - EACH FRAME&amp;#10;# =============================================================================&amp;#10;if target_force.whiteForce is not None:&amp;#10;    cur_force = max(target_force.whiteForce, 0)&amp;#10;    &amp;#10;    # Populate the force buffer for smooth feedback&amp;#10;    FORCE_TOLERANCE_BUFFER.append(cur_force)&amp;#10;    smooth_force = statistics.median(FORCE_TOLERANCE_BUFFER)&amp;#10;    &amp;#10;    # Collect force value for deviation&amp;#10;    force_nrmse_buffer.append(smooth_force)&amp;#10;    nrmse = force_nrmse(force_nrmse_buffer, target_pmvc)&amp;#10;    sbias = force_bias(force_nrmse_buffer, target_pmvc)&amp;#10;    ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)&amp;#10;    &amp;#10;    if len(FORCE_TOLERANCE_BUFFER) &gt;= FORCE_BUFFER_LENGTH:&amp;#10;        if smooth_force &gt; upper_threshold:&amp;#10;            proposed = 2&amp;#10;            deviation = smooth_force - upper_threshold&amp;#10;        elif smooth_force &lt; lower_threshold:&amp;#10;            proposed = 1&amp;#10;            deviation = lower_threshold - smooth_force&amp;#10;        else:&amp;#10;            proposed = 0&amp;#10;            deviation = 0&amp;#10;&amp;#10;    if proposed != toneState and (t - _lastSwitchT) &gt;= STATE_HOLD:&amp;#10;        toneState    = proposed&amp;#10;        _lastSwitchT = t&amp;#10;        if toneState == 2:&amp;#10;            freq, amp = FREQ_HIGH, AMP_MAX&amp;#10;        elif toneState == 1:&amp;#10;            freq, amp = FREQ_LOW, AMP_MAX&amp;#10;        else:&amp;#10;            freq, amp = FREQ_LOW, 0.0&amp;#10;        with _state_lock:&amp;#10;            _target_freq = freq&amp;#10;            _target_amp  = amp&amp;#10;else:&amp;#10;    mute_audio()&amp;#10;    print(&quot;Force is None!&quot;)&amp;#10;&amp;#10;# Create the target display text&amp;#10;if smooth_force &gt; upper_threshold:&amp;#10;    deviation_symbol = &quot;\u2191\u2191\u2191&quot;  # ↑&amp;#10;elif smooth_force &lt; lower_threshold:&amp;#10;    deviation_symbol = &quot;\u2193\u2193\u2193&quot;  # ↓&amp;#10;else:&amp;#10;    deviation_symbol = &quot;\u2013\u2013\u2013&quot;  # – (on target)&amp;#10;&amp;#10;target_display_text = (&amp;#10;    f&quot;============ TRIAL INFO ================\n&quot;&amp;#10;    f&quot;PHASE: {phase_labels.get(cur_phase, cur_phase)}\n&quot;&amp;#10;    f&quot;BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block}\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;Target Color:      {cur_target_color_name}\n&quot;&amp;#10;    f&quot;Physical demand:   {cur_physical_demand_level*100:.0f}% MVC\n&quot;&amp;#10;    f&quot;Cognitive demand:  {cur_cognitive_demand_level:.0f} dE\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;MVC:               {mvc:03.0f} N\n&quot;&amp;#10;    f&quot;Target:            {lower_threshold:03.0f} N | {target_pmvc:03.0f} N | {upper_threshold:03.0f} N\n&quot;&amp;#10;    f&quot;Force:                     {smooth_force:03.0f} N\n&quot;&amp;#10;    f&quot;Cur. Deviation:            {deviation_symbol}\n&quot;&amp;#10;    f&quot;NRMSE:             {nrmse:6.0f}\n&quot;&amp;#10;    f&quot;Bias:              {sbias:+6.0f}\n&quot;&amp;#10;    f&quot;pTWTR:             {ptwtr:6.0f}\n&quot;&amp;#10;    f&quot;========================================\n&quot;&amp;#10;)&amp;#10;&amp;#10;# Display monitoring circle&amp;#10;for circle, label in zip(hole_stimuli, hole_labels):&amp;#10;    circle.draw()&amp;#10;    label.draw()" valType="extendedCode" updates="constant" name="Each Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
-        <Param val="" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="force_nrmse_buffer = []" valType="extendedCode" updates="constant" name="End Routine"/>
         <Param val="False" valType="bool" updates="None" name="disabled"/>
         <Param val="target_code" valType="code" updates="None" name="name"/>
       </CodeComponent>
@@ -531,7 +531,7 @@
         <Param val="False" valType="code" updates="None" plugin="psychopy-apparatus" name="endRoutineOnResponse"/>
         <Param val="target_force" valType="code" updates="None" name="name"/>
         <Param val="50" valType="code" updates="None" name="rate"/>
-        <Param val="target_force" valType="code" updates="None" name="rawDataId"/>
+        <Param val="&quot;target presentation&quot;" valType="code" updates="None" name="rawDataId"/>
         <Param val="True" valType="code" updates="None" name="saveRawData"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
@@ -592,34 +592,17 @@
         <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
-        <Param val="# ===== CONDITION SETUP =====&amp;#10;cur_trial = blocks[oo_block.thisN][oo_level.thisN]&amp;#10;&amp;#10;cur_palette             = cur_trial['palettes'][oo_palette.thisN]&amp;#10;cur_palette_has_target  = cur_trial['palette_has_target'][oo_palette.thisN]&amp;#10;cur_palette_target_hole = cur_trial['palette_target_hole'][oo_palette.thisN]&amp;#10;&amp;#10;prev_reed_holes = None&amp;#10;prev_reed_actions = None&amp;#10;&amp;#10;&amp;#10;# =============================================================================&amp;#10;# AUDIO - BEGIN ROUTINE&amp;#10;# =============================================================================&amp;#10;mute_audio()  # Start routine silent&amp;#10;&amp;#10;targetForce     = cur_physical_demand_level * mvc&amp;#10;lower_threshold = max(targetForce - TOLERANCE, 0)&amp;#10;upper_threshold = targetForce + TOLERANCE&amp;#10;&amp;#10;toneState    = 0&amp;#10;_lastSwitchT = -1e9&amp;#10;_last_beep_t = -1e9  # tracks last beep time&amp;#10;&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;&amp;#10;trial_display.alignText = &quot;left&quot;&amp;#10;trial_display.bold = True&amp;#10;&amp;#10;# Color the display circle&amp;#10;for i, circle in enumerate(hole_stimuli):&amp;#10;    circle.fillColor = cur_palette[i]" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="# ===== CONDITION SETUP =====&amp;#10;cur_trial = blocks[oo_block.thisN][oo_level.thisN]&amp;#10;&amp;#10;cur_palette             = cur_trial['palettes'][oo_palette.thisN]&amp;#10;cur_palette_has_target  = cur_trial['palette_has_target'][oo_palette.thisN]&amp;#10;cur_palette_target_hole = cur_trial['palette_target_hole'][oo_palette.thisN]&amp;#10;&amp;#10;prev_reed_holes = None&amp;#10;prev_reed_actions = None&amp;#10;&amp;#10;&amp;#10;# =============================================================================&amp;#10;# AUDIO - BEGIN ROUTINE&amp;#10;# =============================================================================&amp;#10;target_pmvc    = cur_physical_demand_level * mvc&amp;#10;lower_threshold = max(target_pmvc - TOLERANCE, 0)&amp;#10;upper_threshold = target_pmvc + TOLERANCE&amp;#10;&amp;#10;toneState    = 0&amp;#10;_lastSwitchT = -1e9&amp;#10;&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;&amp;#10;trial_display.alignText = &quot;left&quot;&amp;#10;trial_display.bold = True&amp;#10;&amp;#10;# Color the display circle&amp;#10;for i, circle in enumerate(hole_stimuli):&amp;#10;    circle.fillColor = cur_palette[i]" valType="extendedCode" updates="constant" name="Begin Routine"/>
         <Param val="Py" valType="str" updates="None" name="Code Type"/>
-        <Param val="# =============================================================================&amp;#10;# AUDIO - EACH FRAME&amp;#10;# =============================================================================&amp;#10;if trial_force.whiteForce is not None:&amp;#10;    if trial_force.whiteForce &gt; upper_threshold:&amp;#10;        proposed = 2&amp;#10;    elif trial_force.whiteForce &lt; lower_threshold:&amp;#10;        proposed = 1&amp;#10;    else:&amp;#10;        proposed = 0&amp;#10;&amp;#10;    if proposed != toneState and (t - _lastSwitchT) &gt;= STATE_HOLD:&amp;#10;        toneState    = proposed&amp;#10;        _lastSwitchT = t&amp;#10;        if toneState == 2:&amp;#10;            freq, amp = FREQ_HIGH, AMP_MAX&amp;#10;        elif toneState == 1:&amp;#10;            freq, amp = FREQ_LOW, AMP_MAX&amp;#10;        else:&amp;#10;            freq, amp = FREQ_LOW, 0.0&amp;#10;        with _state_lock:&amp;#10;            _target_freq = freq&amp;#10;            _target_amp  = amp&amp;#10;else:&amp;#10;    mute_audio()&amp;#10;    print(&quot;Force is None!&quot;)&amp;#10;&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;if trial_force.whiteForce &gt; upper_threshold:&amp;#10;    deviation_symbol = &quot;\u2191\u2191\u2191&quot;  # ↑&amp;#10;elif trial_force.whiteForce &lt; lower_threshold:&amp;#10;    deviation_symbol = &quot;\u2193\u2193\u2193&quot;  # ↓&amp;#10;else:&amp;#10;    deviation_symbol = &quot;\u2013\u2013\u2013&quot;  # – (on target)&amp;#10;&amp;#10;trial_display_text = (&amp;#10;    f&quot;============ TRIAL INFO ================\n&quot;&amp;#10;    f&quot;BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block} | PALETTE {oo_palette.thisN+1:2}/{NUM_PALETTES} | {cur_phase}\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;Target Color:      {cur_target_color_name}\n&quot;&amp;#10;    f&quot;Physical demand:   {cur_physical_demand_level}\n&quot;&amp;#10;    f&quot;Cognitive demand:  {cur_cognitive_demand_level}\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;MVC:               {mvc:03.0f} N\n&quot;&amp;#10;    f&quot;Target:            {lower_threshold:03.0f} N | {targetForce:03.0f} N | {upper_threshold:03.0f} N\n&quot;&amp;#10;    f&quot;Force:                     {trial_force.whiteForce:03.0f} N\n&quot;&amp;#10;    f&quot;Deviation:                 {deviation_symbol}\n&quot;&amp;#10;    f&quot;========================================\n&quot;&amp;#10;)&amp;#10;&amp;#10;for circle, label in zip(hole_stimuli, hole_labels):&amp;#10;    circle.draw()&amp;#10;    label.draw()&amp;#10;&amp;#10;# Highlights reed contacts&amp;#10;last_selected = trial_reed.reedHoles[-1] if trial_reed.reedHoles else None&amp;#10;&amp;#10;for i, (circle, label) in enumerate(zip(hole_stimuli, hole_labels)):&amp;#10;    # target highlight&amp;#10;    if cur_palette_has_target and i == cur_palette_target_hole:&amp;#10;        circle.lineColor = 'yellow'&amp;#10;        circle.lineWidth = 3&amp;#10;    # last selected highlight&amp;#10;    elif i == last_selected:&amp;#10;        circle.lineColor = 'white'&amp;#10;        circle.lineWidth = 3&amp;#10;    else:&amp;#10;        circle.lineColor = None&amp;#10;    circle.draw()&amp;#10;    label.draw()" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="# =============================================================================&amp;#10;# AUDIO - EACH FRAME&amp;#10;# =============================================================================&amp;#10;if trial_force.whiteForce is not None:&amp;#10;    cur_force = max(trial_force.whiteForce, 0)&amp;#10;    &amp;#10;    # Populate the force buffer for smooth feedback&amp;#10;    FORCE_TOLERANCE_BUFFER.append(cur_force)&amp;#10;    smooth_force = statistics.median(FORCE_TOLERANCE_BUFFER)&amp;#10;    &amp;#10;    # Collect force value for deviation&amp;#10;    force_nrmse_buffer.append(smooth_force)&amp;#10;    nrmse = force_nrmse(force_nrmse_buffer, target_pmvc)&amp;#10;    sbias = force_bias(force_nrmse_buffer, target_pmvc)&amp;#10;    ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)&amp;#10;    &amp;#10;    if len(FORCE_TOLERANCE_BUFFER) &gt;= FORCE_BUFFER_LENGTH:&amp;#10;        if smooth_force &gt; upper_threshold:&amp;#10;            proposed = 2&amp;#10;        elif smooth_force &lt; lower_threshold:&amp;#10;            proposed = 1&amp;#10;        else:&amp;#10;            proposed = 0&amp;#10;&amp;#10;    if proposed != toneState and (t - _lastSwitchT) &gt;= STATE_HOLD:&amp;#10;        toneState    = proposed&amp;#10;        _lastSwitchT = t&amp;#10;        if toneState == 2:&amp;#10;            freq, amp = FREQ_HIGH, AMP_MAX&amp;#10;        elif toneState == 1:&amp;#10;            freq, amp = FREQ_LOW, AMP_MAX&amp;#10;        else:&amp;#10;            freq, amp = FREQ_LOW, 0.0&amp;#10;        with _state_lock:&amp;#10;            _target_freq = freq&amp;#10;            _target_amp  = amp&amp;#10;else:&amp;#10;    mute_audio()&amp;#10;    print(&quot;Force is None!&quot;)&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;if smooth_force &gt; upper_threshold:&amp;#10;    deviation_symbol = &quot;\u2191\u2191\u2191&quot;  # ↑&amp;#10;elif smooth_force &lt; lower_threshold:&amp;#10;    deviation_symbol = &quot;\u2193\u2193\u2193&quot;  # ↓&amp;#10;else:&amp;#10;    deviation_symbol = &quot;\u2013\u2013\u2013&quot;  # – (on target)&amp;#10;&amp;#10;trial_display_text = (&amp;#10;    f&quot;============ TRIAL INFO ================\n&quot;&amp;#10;    f&quot;PHASE: {phase_labels.get(cur_phase, cur_phase)}\n&quot;&amp;#10;    f&quot;BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block} | PALETTE {oo_palette.thisN+1:2}/{cur_num_palettes}\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;Target Color:      {cur_target_color_name}\n&quot;&amp;#10;    f&quot;Physical demand:   {cur_physical_demand_level*100:.0f}% MVC\n&quot;&amp;#10;    f&quot;Cognitive demand:  {cur_cognitive_demand_level:.0f} dE\n&quot;&amp;#10;    f&quot;----------------------------------------\n&quot;&amp;#10;    f&quot;MVC:               {mvc:03.0f} N\n&quot;&amp;#10;    f&quot;Target:            {lower_threshold:03.0f} N | {target_pmvc:03.0f} N | {upper_threshold:03.0f} N\n&quot;&amp;#10;    f&quot;Force:                     {smooth_force:03.0f} N\n&quot;&amp;#10;    f&quot;Cur. Deviation:            {deviation_symbol}\n&quot;&amp;#10;    f&quot;NRMSE:             {nrmse:6.0f}\n&quot;&amp;#10;    f&quot;Bias:              {sbias:+6.0f}\n&quot;&amp;#10;    f&quot;pTWTR:             {ptwtr:6.0f}\n&quot;&amp;#10;    f&quot;========================================\n&quot;&amp;#10;)&amp;#10;&amp;#10;for circle, label in zip(hole_stimuli, hole_labels):&amp;#10;    circle.draw()&amp;#10;    label.draw()&amp;#10;&amp;#10;# Highlights reed contacts&amp;#10;last_selected = trial_reed.reedHoles[-1] if trial_reed.reedHoles else None&amp;#10;&amp;#10;for i, (circle, label) in enumerate(zip(hole_stimuli, hole_labels)):&amp;#10;    # target highlight&amp;#10;    if cur_palette_has_target and i == cur_palette_target_hole:&amp;#10;        circle.lineColor = 'yellow'&amp;#10;        circle.lineWidth = 3&amp;#10;    # last selected highlight&amp;#10;    elif i == last_selected:&amp;#10;        circle.lineColor = 'white'&amp;#10;        circle.lineWidth = 3&amp;#10;    else:&amp;#10;        circle.lineColor = None&amp;#10;    circle.draw()&amp;#10;    label.draw()" valType="extendedCode" updates="constant" name="Each Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
-        <Param val="# Mute audio&amp;#10;mute_audio()&amp;#10;&amp;#10;# Determine d-prime metrics&amp;#10;is_hit               = int(cur_palette_has_target and cur_palette_target_hole in trial_reed.reedHoles)&amp;#10;is_false_alarm       = int(not cur_palette_has_target and len(trial_reed.reedHoles) &gt; 0)&amp;#10;is_miss              = int(cur_palette_has_target and cur_palette_target_hole not in trial_reed.reedHoles)&amp;#10;is_correct_rejection = int(not cur_palette_has_target and len(trial_reed.reedHoles) == 0)&amp;#10;&amp;#10;# Accumulate d-prime metrics&amp;#10;hits               += is_hit&amp;#10;false_alarms       += is_false_alarm&amp;#10;misses             += is_miss&amp;#10;correct_rejections += is_correct_rejection&amp;#10;&amp;#10;# Get the first insertion event (action == 1) across all reed events&amp;#10;first_insert_idx = next((h for h, a in zip(trial_reed.reedHoles, trial_reed.reedActions) if a == 1), None)&amp;#10;first_insert_rt  = next((t for t, a in zip(trial_reed.reedTimes,  trial_reed.reedActions) if a == 1), None)&amp;#10;&amp;#10;# Write hole-level data: mark which hole was first selected and its RT&amp;#10;for hole_idx in range(NUM_DISTRACTORS):&amp;#10;    i = row_index[(oo_block.thisN, oo_level.thisN, oo_palette.thisN, hole_idx)]&amp;#10;    rows[i][&quot;is_selected&quot;] = int(hole_idx == first_insert_idx)&amp;#10;    rows[i][&quot;selected_rt&quot;] = first_insert_rt if hole_idx == first_insert_idx else None&amp;#10;&amp;#10;# Write palette-level data&amp;#10;for i in palette_row_index[(oo_block.thisN, oo_level.thisN, oo_palette.thisN)]:&amp;#10;    rows[i][&quot;is_hit&quot;]               = is_hit&amp;#10;    rows[i][&quot;is_false_alarm&quot;]       = is_false_alarm&amp;#10;    rows[i][&quot;is_miss&quot;]              = is_miss&amp;#10;    rows[i][&quot;is_correct_rejection&quot;] = is_correct_rejection" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="# Mute audio&amp;#10;# mute_audio()&amp;#10;&amp;#10;# Determine d-prime metrics&amp;#10;is_hit               = int(cur_palette_has_target and cur_palette_target_hole in trial_reed.reedHoles)&amp;#10;is_false_alarm       = int(not cur_palette_has_target and len(trial_reed.reedHoles) &gt; 0)&amp;#10;is_miss              = int(cur_palette_has_target and cur_palette_target_hole not in trial_reed.reedHoles)&amp;#10;is_correct_rejection = int(not cur_palette_has_target and len(trial_reed.reedHoles) == 0)&amp;#10;&amp;#10;# Accumulate d-prime metrics&amp;#10;hits               += is_hit&amp;#10;false_alarms       += is_false_alarm&amp;#10;misses             += is_miss&amp;#10;correct_rejections += is_correct_rejection&amp;#10;&amp;#10;# Get the first insertion event (action == 1) across all reed events&amp;#10;first_insert_idx = next((h for h, a in zip(trial_reed.reedHoles, trial_reed.reedActions) if a == 1), None)&amp;#10;first_insert_rt  = next((t for t, a in zip(trial_reed.reedTimesRelative, trial_reed.reedActions) if a == 1), None)&amp;#10;&amp;#10;# Write hole-level data: mark which hole was first selected and its RT&amp;#10;for hole_idx in range(NUM_DISTRACTORS):&amp;#10;    i = row_index[(oo_block.thisN, oo_level.thisN, oo_palette.thisN, hole_idx)]&amp;#10;    rows[i][&quot;is_selected&quot;] = int(hole_idx == first_insert_idx)&amp;#10;    rows[i][&quot;selected_rt&quot;] = first_insert_rt if hole_idx == first_insert_idx else None&amp;#10;&amp;#10;# Write palette-level data&amp;#10;for i in palette_row_index[(oo_block.thisN, oo_level.thisN, oo_palette.thisN)]:&amp;#10;    rows[i][&quot;is_hit&quot;]               = is_hit&amp;#10;    rows[i][&quot;is_false_alarm&quot;]       = is_false_alarm&amp;#10;    rows[i][&quot;is_miss&quot;]              = is_miss&amp;#10;    rows[i][&quot;is_correct_rejection&quot;] = is_correct_rejection" valType="extendedCode" updates="constant" name="End Routine"/>
         <Param val="False" valType="bool" updates="None" name="disabled"/>
         <Param val="trial_color_code" valType="code" updates="None" name="name"/>
       </CodeComponent>
-      <ApparatusReedComponent name="trial_reed" plugin="psychopy-apparatus">
-        <Param val="apparatus" valType="device" updates="None" name="deviceLabel"/>
-        <Param val="False" valType="bool" updates="None" name="disabled"/>
-        <Param val="" valType="code" updates="None" name="durationEstim"/>
-        <Param val="False" valType="code" updates="None" name="endRoutineOnResponse"/>
-        <Param val="'all'" valType="code" updates="None" plugin="psychopy-apparatus" name="holes"/>
-        <Param val="trial_reed" valType="code" updates="None" name="name"/>
-        <Param val="100" valType="code" updates="None" name="rate"/>
-        <Param val="&quot;inner&quot;" valType="code" updates="set every repeat" name="reedHoles"/>
-        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="" valType="code" updates="None" name="startEstim"/>
-        <Param val="time (s)" valType="str" updates="None" name="startType"/>
-        <Param val="0.0" valType="code" updates="None" name="startVal"/>
-        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
-        <Param val="PALETTE_DURATION_SEC + 1" valType="code" updates="constant" name="stopVal"/>
-        <Param val="False" valType="bool" updates="None" name="syncScreenRefresh"/>
-      </ApparatusReedComponent>
       <ApparatusLEDComponent name="trial_lights" plugin="psychopy-apparatus">
         <Param val="" valType="device" updates="None" name="deviceLabel"/>
         <Param val="False" valType="bool" updates="None" name="disabled"/>
@@ -639,6 +622,23 @@
         <Param val="True" valType="code" updates="None" name="turnOffOnRoutineEnd"/>
         <Param val="True" valType="code" updates="None" name="turnOffOnStop"/>
       </ApparatusLEDComponent>
+      <ApparatusReedComponent name="trial_reed" plugin="psychopy-apparatus">
+        <Param val="apparatus" valType="device" updates="None" name="deviceLabel"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="endRoutineOnResponse"/>
+        <Param val="'all'" valType="code" updates="None" plugin="psychopy-apparatus" name="holes"/>
+        <Param val="trial_reed" valType="code" updates="None" name="name"/>
+        <Param val="100" valType="code" updates="None" name="rate"/>
+        <Param val="&quot;inner&quot;" valType="code" updates="set every repeat" name="reedHoles"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="PALETTE_DURATION_SEC + 1" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="syncScreenRefresh"/>
+      </ApparatusReedComponent>
       <ApparatusForceComponent name="trial_force" plugin="psychopy-apparatus">
         <Param val="white" valType="str" updates="None" plugin="psychopy-apparatus" name="device"/>
         <Param val="" valType="device" updates="None" name="deviceLabel"/>
@@ -648,7 +648,7 @@
         <Param val="False" valType="code" updates="None" plugin="psychopy-apparatus" name="endRoutineOnResponse"/>
         <Param val="trial_force" valType="code" updates="None" name="name"/>
         <Param val="50" valType="code" updates="None" name="rate"/>
-        <Param val="trial_force" valType="code" updates="None" name="rawDataId"/>
+        <Param val="&quot;trial&quot;" valType="code" updates="None" name="rawDataId"/>
         <Param val="True" valType="code" updates="None" name="saveRawData"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
@@ -822,12 +822,12 @@
       <CodeComponent name="mvc_code" plugin="None">
         <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
-        <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="# Define button for exercise stop&amp;#10;mvc_stop_practice_text = &quot;ÜBUNGSPHASE BEENDEN\n\n=&gt; Kalibrierung startet&quot;" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="mvc_display.alignText = &quot;left&quot;;&amp;#10;mvc_display.bold = true;&amp;#10;start_time = core.getTime();&amp;#10;" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
-        <Param val="# Improve display appearance&amp;#10;mvc_display.alignText = &quot;left&quot;&amp;#10;mvc_display.bold = True&amp;#10;&amp;#10;" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="# Improve display appearance&amp;#10;mvc_display.alignText = &quot;left&quot;&amp;#10;mvc_display.bold = True" valType="extendedCode" updates="constant" name="Begin Routine"/>
         <Param val="Py" valType="str" updates="None" name="Code Type"/>
-        <Param val="# Measure time&amp;#10;remaining = max(0, cond_maxforce_duration - t)&amp;#10;if remaining &lt;= 0:&amp;#10;    continueRoutine = False&amp;#10;&amp;#10;# Update button label&amp;#10;mvc_continue_label = f'Klicken oder automatisch weiter in {int(remaining)}s'" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="# Measure time&amp;#10;remaining = max(0, maxforce_duration - t)&amp;#10;if remaining &lt;= 0:&amp;#10;    continueRoutine = False&amp;#10;&amp;#10;# Update button label&amp;#10;mvc_continue_label = (&amp;#10;    f'WEITER IN {int(remaining)}s\n'&amp;#10;    + f'\n'&amp;#10;    + f'oder hier Klicken'&amp;#10;)" valType="extendedCode" updates="constant" name="Each Frame"/>
         <Param val="elapsed = (core.getTime() - start_time);&amp;#10;remaining = Math.max(0, (cond_maxforce_duration - elapsed));&amp;#10;button_label = `Weiter in ${Number.parseInt(remaining)}s`;&amp;#10;" valType="extendedCode" updates="constant" name="Each JS Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
@@ -878,16 +878,16 @@
         <Param val="Courier New" valType="str" updates="constant" name="font"/>
         <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
         <Param val="False" valType="bool" updates="constant" name="italic"/>
-        <Param val="0.035" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
         <Param val="mvc_continue" valType="code" updates="None" name="name"/>
         <Param val="True" valType="bool" updates="constant" name="oncePerClick"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
         <Param val="" valType="num" updates="constant" name="padding"/>
-        <Param val="(0, -0.3)" valType="list" updates="constant" name="pos"/>
+        <Param val="(0.3, -0.3)" valType="list" updates="constant" name="pos"/>
         <Param val="every click" valType="str" updates="None" name="save"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="(0.25, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="(0.4, 0.1)" valType="list" updates="constant" name="size"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
         <Param val="0" valType="code" updates="None" name="startVal"/>
@@ -899,83 +899,38 @@
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
       </ButtonComponent>
-    </Routine>
-    <Routine name="rr_start">
-      <RoutineSettingsComponent name="rr_start" plugin="None">
-        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
-        <Param val="" valType="str" updates="None" name="backgroundImg"/>
-        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
-        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
-        <Param val="" valType="str" updates="constant" name="desc"/>
-        <Param val="False" valType="bool" updates="None" name="disabled"/>
-        <Param val="" valType="code" updates="None" name="durationEstim"/>
-        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
-        <Param val="rr_start" valType="code" updates="None" name="name"/>
-        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="" valType="code" updates="constant" name="skipIf"/>
-        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
-        <Param val="" valType="code" updates="constant" name="stopVal"/>
-        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
-      </RoutineSettingsComponent>
-      <TextComponent name="start_text" plugin="None">
-        <Param val="white" valType="color" updates="constant" name="color"/>
-        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
-        <Param val="1" valType="num" updates="constant" name="contrast"/>
-        <Param val="False" valType="bool" updates="None" name="disabled"/>
-        <Param val="False" valType="code" updates="constant" name="draggable"/>
-        <Param val="" valType="code" updates="None" name="durationEstim"/>
-        <Param val="None" valType="str" updates="constant" name="flip"/>
-        <Param val="Arial" valType="str" updates="constant" name="font"/>
-        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
-        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
-        <Param val="start_text" valType="code" updates="None" name="name"/>
-        <Param val="" valType="num" updates="constant" name="opacity"/>
-        <Param val="0" valType="num" updates="constant" name="ori"/>
-        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
-        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="" valType="code" updates="None" name="startEstim"/>
-        <Param val="time (s)" valType="str" updates="None" name="startType"/>
-        <Param val="0.0" valType="code" updates="None" name="startVal"/>
-        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
-        <Param val="" valType="code" updates="constant" name="stopVal"/>
-        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
-        <Param val="Fertig - es kann losgehen!" valType="str" updates="constant" name="text"/>
-        <Param val="from exp settings" valType="str" updates="None" name="units"/>
-        <Param val="" valType="code" updates="None" name="validator"/>
-        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
-      </TextComponent>
-      <ButtonComponent name="start_button" plugin="None">
+      <ButtonComponent name="mvc_stop_practice" plugin="None">
         <Param val="center" valType="str" updates="constant" name="anchor"/>
         <Param val="True" valType="bool" updates="constant" name="bold"/>
         <Param val="None" valType="color" updates="constant" name="borderColor"/>
         <Param val="0" valType="num" updates="constant" name="borderWidth"/>
-        <Param val="" valType="extendedCode" updates="constant" name="callback"/>
+        <Param val="oo_mvc_rep.finished = True" valType="extendedCode" updates="constant" name="callback"/>
         <Param val="white" valType="color" updates="constant" name="color"/>
         <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
         <Param val="1" valType="num" updates="constant" name="contrast"/>
         <Param val="False" valType="bool" updates="None" name="disabled"/>
         <Param val="" valType="code" updates="None" name="durationEstim"/>
         <Param val="$(-1.0000, -0.2157, -1.0000)" valType="color" updates="constant" name="fillColor"/>
-        <Param val="Arvo" valType="str" updates="constant" name="font"/>
+        <Param val="Courier New" valType="str" updates="constant" name="font"/>
         <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
         <Param val="False" valType="bool" updates="constant" name="italic"/>
-        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
-        <Param val="start_button" valType="code" updates="None" name="name"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="mvc_stop_practice" valType="code" updates="None" name="name"/>
         <Param val="True" valType="bool" updates="constant" name="oncePerClick"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
         <Param val="" valType="num" updates="constant" name="padding"/>
-        <Param val="(0, -0.2)" valType="list" updates="constant" name="pos"/>
+        <Param val="(-0.3, -0.3)" valType="list" updates="constant" name="pos"/>
         <Param val="every click" valType="str" updates="None" name="save"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="(0.25, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="(0.4, 0.1)" valType="list" updates="constant" name="size"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
-        <Param val="time (s)" valType="str" updates="None" name="startType"/>
-        <Param val="0" valType="code" updates="None" name="startVal"/>
+        <Param val="condition" valType="str" updates="None" name="startType"/>
+        <Param val="maxforce_type == &quot;Practice&quot;" valType="code" updates="None" name="startVal"/>
         <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
         <Param val="" valType="code" updates="constant" name="stopVal"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
-        <Param val="START" valType="str" updates="constant" name="text"/>
+        <Param val="$mvc_stop_practice_text" valType="str" updates="set every repeat" name="text"/>
         <Param val="button onset" valType="str" updates="constant" name="timeRelativeTo"/>
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
@@ -1004,14 +959,14 @@
         <Param val="" valType="extendedCode" updates="constant" name="Begin Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
-        <Param val="#dprime Calculation&amp;#10;H = hits + misses&amp;#10;F = false_alarms + correct_rejections&amp;#10;&amp;#10;hit_rate = (hits+0.5)/(H+1) if H&gt;0 else 0.5&amp;#10;fa_rate = (false_alarms+0.5)/(F+1) if F&gt;0 else 0.5&amp;#10;d_prime = norm.ppf(hit_rate) - norm.ppf(fa_rate)&amp;#10;&amp;#10;currentLoop.addData('d_prime', d_prime)&amp;#10;&amp;#10;# Write trial-level data&amp;#10;for palette_idx in range(NUM_PALETTES):&amp;#10;    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:&amp;#10;        rows[i][&quot;hits&quot;]               = hits&amp;#10;        rows[i][&quot;false_alarms&quot;]       = false_alarms&amp;#10;        rows[i][&quot;misses&quot;]             = misses&amp;#10;        rows[i][&quot;correct_rejections&quot;] = correct_rejections&amp;#10;        rows[i][&quot;d_prime&quot;]            = d_prime&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;&amp;#10;feedback_display.alignText = &quot;left&quot;&amp;#10;feedback_display.bold = True&amp;#10;&amp;#10;feedback_display_text = (&amp;#10;    f&quot;=========== FEEDBACK ===========\n&quot;&amp;#10;    f&quot;d-prime:           {d_prime:.2f}\n&quot;&amp;#10;    f&quot;Hits:              {hits}\n&quot;&amp;#10;    f&quot;Misses:            {misses}\n&quot;&amp;#10;    f&quot;False Alarms:      {false_alarms}\n&quot;&amp;#10;    f&quot;Correct Rej.:      {correct_rejections}\n&quot;&amp;#10;    f&quot;================================\n&quot;&amp;#10;)" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="# Mute audio if still running&amp;#10;mute_audio()&amp;#10;&amp;#10;# dprime Calculation&amp;#10;H = hits + misses&amp;#10;F = false_alarms + correct_rejections&amp;#10;&amp;#10;hit_rate = (hits+0.5)/(H+1) if H&gt;0 else 0.5&amp;#10;fa_rate = (false_alarms+0.5)/(F+1) if F&gt;0 else 0.5&amp;#10;d_prime = norm.ppf(hit_rate) - norm.ppf(fa_rate)&amp;#10;&amp;#10;currentLoop.addData('d_prime', d_prime)&amp;#10;&amp;#10;# Write trial-level data&amp;#10;for palette_idx in range(cur_num_palettes):&amp;#10;    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:&amp;#10;        rows[i][&quot;hits&quot;]               = hits&amp;#10;        rows[i][&quot;false_alarms&quot;]       = false_alarms&amp;#10;        rows[i][&quot;misses&quot;]             = misses&amp;#10;        rows[i][&quot;correct_rejections&quot;] = correct_rejections&amp;#10;        rows[i][&quot;d_prime&quot;]            = d_prime&amp;#10;        rows[i][&quot;NRMSE&quot;]              = nrmse&amp;#10;        rows[i][&quot;sBias&quot;]              = sbias&amp;#10;        rows[i][&quot;pTWTR&quot;]              = ptwtr&amp;#10;&amp;#10;&amp;#10;# ===== DISPLAY SETUP =====&amp;#10;# rating_dprime_text.alignText = &quot;left&quot;&amp;#10;rating_dprime_text.bold = True&amp;#10;rating_physical_text.bold = True&amp;#10;rating_cognitive_text.bold = True&amp;#10;&amp;#10;feedback_display_text = (&amp;#10;    f&quot;==== PERFORMANCE ====\n&quot;&amp;#10;    f&quot;d-prime:       {d_prime:+5.2f}\n&quot;&amp;#10;    f&quot;Hits:          {hits:5}\n&quot;&amp;#10;    f&quot;Misses:        {misses:5}\n&quot;&amp;#10;    f&quot;False Alarms:  {false_alarms:5}\n&quot;&amp;#10;    f&quot;Correct Rej.:  {correct_rejections:5}\n&quot;&amp;#10;    f&quot;---------------------\n&quot;&amp;#10;    f&quot;NRMSE:         {nrmse:5.0f}\n&quot;&amp;#10;    f&quot;Bias:          {sbias:+5.0f}\n&quot;&amp;#10;    f&quot;pTWR:          {ptwtr:5.0f}\n&quot;&amp;#10;    f&quot;=====================&quot;&amp;#10;)" valType="extendedCode" updates="constant" name="Begin Routine"/>
         <Param val="Py" valType="str" updates="None" name="Code Type"/>
-        <Param val="" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="# Check whether experimenter has entered both ratings&amp;#10;is_ratings_complete = (&amp;#10;    rating_physical.getRating() is not None and&amp;#10;    rating_cognitive.getRating() is not None&amp;#10;)" valType="extendedCode" updates="constant" name="Each Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
         <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
         <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
-        <Param val="# Write trial-level data&amp;#10;for palette_idx in range(NUM_PALETTES):&amp;#10;    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:&amp;#10;        if cond_slider == &quot;cognitive&quot;:&amp;#10;            rows[i][&quot;rpe_cognitive&quot;] = rating_slider.getRating()&amp;#10;        elif cond_slider == &quot;physical&quot;:&amp;#10;            rows[i][&quot;rpe_physical&quot;] = rating_slider.getRating()" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="# Write trial-level data&amp;#10;for palette_idx in range(cur_num_palettes):&amp;#10;    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:&amp;#10;            rows[i][&quot;rpe_cognitive&quot;] = rating_cognitive.getRating()&amp;#10;            rows[i][&quot;rpe_physical&quot;]  = rating_physical.getRating()" valType="extendedCode" updates="constant" name="End Routine"/>
         <Param val="False" valType="bool" updates="None" name="disabled"/>
         <Param val="rating_code" valType="code" updates="None" name="name"/>
       </CodeComponent>
@@ -1029,7 +984,7 @@
         <Param val="rating_dprime_text" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
-        <Param val="(-0.5, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="(-0.2, 0.2)" valType="list" updates="constant" name="pos"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
@@ -1056,7 +1011,7 @@
         <Param val="rating_physical_text" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
-        <Param val="(-0.5, -0.1)" valType="list" updates="constant" name="pos"/>
+        <Param val="(0.4, -0.1)" valType="list" updates="constant" name="pos"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
@@ -1079,18 +1034,18 @@
         <Param val="Red" valType="color" updates="constant" name="fillColor"/>
         <Param val="False" valType="bool" updates="constant" name="flip"/>
         <Param val="Noto Sans" valType="str" updates="constant" name="font"/>
-        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="False" valType="bool" updates="constant" name="forceEndRoutine"/>
         <Param val="1" valType="num" updates="constant" name="granularity"/>
         <Param val="" valType="code" updates="None" name="initVal"/>
         <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="labels"/>
-        <Param val="0.035" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
         <Param val="rating_physical" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
-        <Param val="(-0.5, -0.2)" valType="list" updates="constant" name="pos"/>
+        <Param val="(0.4, -0.2)" valType="list" updates="constant" name="pos"/>
         <Param val="False" valType="bool" updates="constant" name="readOnly"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="(0.4, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="(0.5, 0.075)" valType="list" updates="constant" name="size"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
         <Param val="0.0" valType="code" updates="None" name="startVal"/>
@@ -1099,7 +1054,7 @@
         <Param val="False" valType="bool" updates="constant" name="storeHistory"/>
         <Param val="True" valType="bool" updates="constant" name="storeRating"/>
         <Param val="True" valType="bool" updates="constant" name="storeRatingTime"/>
-        <Param val="[]" valType="list" updates="constant" name="styleTweaks"/>
+        <Param val="['triangleMarker']" valType="list" updates="constant" name="styleTweaks"/>
         <Param val="rating" valType="str" updates="constant" name="styles"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
         <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="ticks"/>
@@ -1120,7 +1075,7 @@
         <Param val="rating_cognitive_text" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
-        <Param val="(-0.5, 0.1)" valType="list" updates="constant" name="pos"/>
+        <Param val="(0.4, 0.3)" valType="list" updates="constant" name="pos"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
@@ -1128,7 +1083,7 @@
         <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
         <Param val="" valType="code" updates="constant" name="stopVal"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
-        <Param val="Körperliche Anstrengung" valType="str" updates="constant" name="text"/>
+        <Param val="Kognitive Anstrengung" valType="str" updates="constant" name="text"/>
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
         <Param val="" valType="num" updates="constant" name="wrapWidth"/>
@@ -1143,18 +1098,18 @@
         <Param val="Red" valType="color" updates="constant" name="fillColor"/>
         <Param val="False" valType="bool" updates="constant" name="flip"/>
         <Param val="Noto Sans" valType="str" updates="constant" name="font"/>
-        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="False" valType="bool" updates="constant" name="forceEndRoutine"/>
         <Param val="1" valType="num" updates="constant" name="granularity"/>
         <Param val="" valType="code" updates="None" name="initVal"/>
         <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="labels"/>
-        <Param val="0.035" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
         <Param val="rating_cognitive" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
-        <Param val="(-0.5, 0.2)" valType="list" updates="constant" name="pos"/>
+        <Param val="(0.4, 0.2)" valType="list" updates="constant" name="pos"/>
         <Param val="False" valType="bool" updates="constant" name="readOnly"/>
         <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="(0.4, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="(0.5, 0.075)" valType="list" updates="constant" name="size"/>
         <Param val="" valType="code" updates="None" name="startEstim"/>
         <Param val="time (s)" valType="str" updates="None" name="startType"/>
         <Param val="0.0" valType="code" updates="None" name="startVal"/>
@@ -1163,32 +1118,13 @@
         <Param val="False" valType="bool" updates="constant" name="storeHistory"/>
         <Param val="True" valType="bool" updates="constant" name="storeRating"/>
         <Param val="True" valType="bool" updates="constant" name="storeRatingTime"/>
-        <Param val="[]" valType="list" updates="constant" name="styleTweaks"/>
+        <Param val="['triangleMarker']" valType="list" updates="constant" name="styleTweaks"/>
         <Param val="rating" valType="str" updates="constant" name="styles"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
         <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="ticks"/>
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
       </SliderComponent>
-      <KeyboardComponent name="rating_continue_keyboard" plugin="None">
-        <Param val="'space'" valType="list" updates="constant" name="allowedKeys"/>
-        <Param val="" valType="str" updates="constant" name="correctAns"/>
-        <Param val="False" valType="bool" updates="None" name="disabled"/>
-        <Param val="True" valType="bool" updates="constant" name="discard previous"/>
-        <Param val="" valType="code" updates="None" name="durationEstim"/>
-        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
-        <Param val="rating_continue_keyboard" valType="code" updates="None" name="name"/>
-        <Param val="press" valType="str" updates="constant" name="registerOn"/>
-        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
-        <Param val="" valType="code" updates="None" name="startEstim"/>
-        <Param val="time (s)" valType="str" updates="None" name="startType"/>
-        <Param val="0.0" valType="code" updates="None" name="startVal"/>
-        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
-        <Param val="" valType="code" updates="constant" name="stopVal"/>
-        <Param val="last key" valType="str" updates="constant" name="store"/>
-        <Param val="False" valType="bool" updates="constant" name="storeCorrect"/>
-        <Param val="True" valType="bool" updates="constant" name="syncScreenRefresh"/>
-      </KeyboardComponent>
       <ButtonComponent name="rating_continue_button" plugin="None">
         <Param val="center" valType="str" updates="constant" name="anchor"/>
         <Param val="True" valType="bool" updates="constant" name="bold"/>
@@ -1201,11 +1137,109 @@
         <Param val="False" valType="bool" updates="None" name="disabled"/>
         <Param val="" valType="code" updates="None" name="durationEstim"/>
         <Param val="$(-1.0000, -0.2157, -1.0000)" valType="color" updates="constant" name="fillColor"/>
-        <Param val="Arvo" valType="str" updates="constant" name="font"/>
+        <Param val="Courier New" valType="str" updates="constant" name="font"/>
         <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
         <Param val="False" valType="bool" updates="constant" name="italic"/>
-        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="0.035" valType="num" updates="constant" name="letterHeight"/>
         <Param val="rating_continue_button" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="constant" name="oncePerClick"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="" valType="num" updates="constant" name="padding"/>
+        <Param val="(-0.2, -0.2)" valType="list" updates="constant" name="pos"/>
+        <Param val="every click" valType="str" updates="None" name="save"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="(0.25, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="condition" valType="str" updates="None" name="startType"/>
+        <Param val="is_ratings_complete" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="WEITER" valType="str" updates="constant" name="text"/>
+        <Param val="button onset" valType="str" updates="constant" name="timeRelativeTo"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+      </ButtonComponent>
+    </Routine>
+    <Routine name="rr_start_mvc">
+      <RoutineSettingsComponent name="rr_start_mvc" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="rr_start_mvc" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <CodeComponent name="start_mvc_code" plugin="None">
+        <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
+        <Param val="# Define button for exercise stop&amp;#10;start_mvc_button_text = &quot;Starte\nKalibrierung&quot;" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="Py" valType="str" updates="None" name="Code Type"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="start_mvc_code" valType="code" updates="None" name="name"/>
+      </CodeComponent>
+      <TextComponent name="start_mvc_display" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_mvc_display" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="Fertig - es kann losgehen!" valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <ButtonComponent name="start_mvc_button" plugin="None">
+        <Param val="center" valType="str" updates="constant" name="anchor"/>
+        <Param val="True" valType="bool" updates="constant" name="bold"/>
+        <Param val="None" valType="color" updates="constant" name="borderColor"/>
+        <Param val="0" valType="num" updates="constant" name="borderWidth"/>
+        <Param val="" valType="extendedCode" updates="constant" name="callback"/>
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="$(-1.0000, -0.2157, -1.0000)" valType="color" updates="constant" name="fillColor"/>
+        <Param val="Courier New" valType="str" updates="constant" name="font"/>
+        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="False" valType="bool" updates="constant" name="italic"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_mvc_button" valType="code" updates="None" name="name"/>
         <Param val="True" valType="bool" updates="constant" name="oncePerClick"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
@@ -1220,7 +1254,105 @@
         <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
         <Param val="" valType="code" updates="constant" name="stopVal"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
-        <Param val="START" valType="str" updates="constant" name="text"/>
+        <Param val="$start_mvc_button_text" valType="str" updates="set every repeat" name="text"/>
+        <Param val="button onset" valType="str" updates="constant" name="timeRelativeTo"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+      </ButtonComponent>
+    </Routine>
+    <Routine name="rr_start_exp">
+      <RoutineSettingsComponent name="rr_start_exp" plugin="None">
+        <Param val="none" valType="str" updates="None" name="backgroundFit"/>
+        <Param val="" valType="str" updates="None" name="backgroundImg"/>
+        <Param val="$[0,0,0]" valType="color" updates="None" name="color"/>
+        <Param val="rgb" valType="str" updates="None" name="colorSpace"/>
+        <Param val="" valType="str" updates="constant" name="desc"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="False" valType="code" updates="None" name="forceNonSlip"/>
+        <Param val="rr_start_exp" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="constant" name="skipIf"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="False" valType="bool" updates="None" name="useWindowParams"/>
+      </RoutineSettingsComponent>
+      <CodeComponent name="start_exp_code" plugin="None">
+        <Param val="" valType="extendedCode" updates="constant" name="Before Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Before JS Experiment"/>
+        <Param val="# Define button for exercise stop&amp;#10;start_exp_button_text = &quot;Starte\nExperiment&quot;" valType="extendedCode" updates="constant" name="Begin Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin JS Routine"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Begin Routine"/>
+        <Param val="Py" valType="str" updates="None" name="Code Type"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="Each JS Frame"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Experiment"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End JS Routine"/>
+        <Param val="" valType="extendedCode" updates="constant" name="End Routine"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="start_exp_code" valType="code" updates="None" name="name"/>
+      </CodeComponent>
+      <TextComponent name="start_exp_text" plugin="None">
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="False" valType="code" updates="constant" name="draggable"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="None" valType="str" updates="constant" name="flip"/>
+        <Param val="Arial" valType="str" updates="constant" name="font"/>
+        <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
+        <Param val="0.05" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_exp_text" valType="code" updates="None" name="name"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="(0, 0)" valType="list" updates="constant" name="pos"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0.0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="Kalibierung abgeschlossen. Das Experiment kann beginnen." valType="str" updates="constant" name="text"/>
+        <Param val="from exp settings" valType="str" updates="None" name="units"/>
+        <Param val="" valType="code" updates="None" name="validator"/>
+        <Param val="" valType="num" updates="constant" name="wrapWidth"/>
+      </TextComponent>
+      <ButtonComponent name="start_exp_button" plugin="None">
+        <Param val="center" valType="str" updates="constant" name="anchor"/>
+        <Param val="True" valType="bool" updates="constant" name="bold"/>
+        <Param val="None" valType="color" updates="constant" name="borderColor"/>
+        <Param val="0" valType="num" updates="constant" name="borderWidth"/>
+        <Param val="" valType="extendedCode" updates="constant" name="callback"/>
+        <Param val="white" valType="color" updates="constant" name="color"/>
+        <Param val="rgb" valType="str" updates="constant" name="colorSpace"/>
+        <Param val="1" valType="num" updates="constant" name="contrast"/>
+        <Param val="False" valType="bool" updates="None" name="disabled"/>
+        <Param val="" valType="code" updates="None" name="durationEstim"/>
+        <Param val="$(-1.0000, -0.2157, -1.0000)" valType="color" updates="constant" name="fillColor"/>
+        <Param val="Courier New" valType="str" updates="constant" name="font"/>
+        <Param val="True" valType="bool" updates="constant" name="forceEndRoutine"/>
+        <Param val="False" valType="bool" updates="constant" name="italic"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="start_exp_button" valType="code" updates="None" name="name"/>
+        <Param val="True" valType="bool" updates="constant" name="oncePerClick"/>
+        <Param val="" valType="num" updates="constant" name="opacity"/>
+        <Param val="0" valType="num" updates="constant" name="ori"/>
+        <Param val="" valType="num" updates="constant" name="padding"/>
+        <Param val="(0, -0.2)" valType="list" updates="constant" name="pos"/>
+        <Param val="every click" valType="str" updates="None" name="save"/>
+        <Param val="True" valType="bool" updates="None" name="saveStartStop"/>
+        <Param val="(0.25, 0.1)" valType="list" updates="constant" name="size"/>
+        <Param val="" valType="code" updates="None" name="startEstim"/>
+        <Param val="time (s)" valType="str" updates="None" name="startType"/>
+        <Param val="0" valType="code" updates="None" name="startVal"/>
+        <Param val="duration (s)" valType="str" updates="None" name="stopType"/>
+        <Param val="" valType="code" updates="constant" name="stopVal"/>
+        <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
+        <Param val="$start_exp_button_text" valType="str" updates="set every repeat" name="text"/>
         <Param val="button onset" valType="str" updates="constant" name="timeRelativeTo"/>
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
@@ -1229,15 +1361,15 @@
   </Routines>
   <Flow>
     <Routine name="rr_setup"/>
-    <Routine name="rr_start"/>
+    <Routine name="rr_start_mvc"/>
     <LoopInitiator loopType="TrialHandler" name="oo_mvc_type">
       <Param name="Selected rows" updates="None" val="" valType="str"/>
-      <Param name="conditions" updates="None" val="[{'cond_maxforce_type': 'practice', 'cond_num_maxforce': 1, 'cond_maxforce_duration': 450}, {'cond_maxforce_type': 'calibration', 'cond_num_maxforce': 2, 'cond_maxforce_duration': 45}]" valType="str"/>
+      <Param name="conditions" updates="None" val="[{'maxforce_type': 'Practice', 'maxforce_repetitions': 999, 'maxforce_duration': 999}, {'maxforce_type': 'Calibration', 'maxforce_repetitions': 2, 'maxforce_duration': 45}]" valType="str"/>
       <Param name="conditionsFile" updates="None" val="oo_mvc_type.xlsx" valType="file"/>
       <Param name="endPoints" updates="None" val="[0, 1]" valType="num"/>
       <Param name="isTrials" updates="None" val="True" valType="bool"/>
       <Param name="loopType" updates="None" val="sequential" valType="str"/>
-      <Param name="nReps" updates="None" val="0" valType="num"/>
+      <Param name="nReps" updates="None" val="1" valType="num"/>
       <Param name="name" updates="None" val="oo_mvc_type" valType="code"/>
       <Param name="random seed" updates="None" val="" valType="code"/>
     </LoopInitiator>
@@ -1248,7 +1380,7 @@
       <Param name="endPoints" updates="None" val="[0, 1]" valType="code"/>
       <Param name="isTrials" updates="None" val="True" valType="bool"/>
       <Param name="loopType" updates="None" val="sequential" valType="str"/>
-      <Param name="nReps" updates="None" val="cond_num_maxforce" valType="code"/>
+      <Param name="nReps" updates="None" val="maxforce_repetitions" valType="code"/>
       <Param name="name" updates="None" val="oo_mvc_rep" valType="code"/>
       <Param name="random seed" updates="None" val="" valType="code"/>
     </LoopInitiator>
@@ -1257,6 +1389,7 @@
     <Routine name="rr_mvc"/>
     <LoopTerminator name="oo_mvc_rep"/>
     <LoopTerminator name="oo_mvc_type"/>
+    <Routine name="rr_start_exp"/>
     <LoopInitiator loopType="TrialHandler" name="oo_block">
       <Param name="Selected rows" updates="None" val="" valType="str"/>
       <Param name="conditions" updates="None" val="None" valType="str"/>
@@ -1288,7 +1421,7 @@
       <Param name="endPoints" updates="None" val="[0, 1]" valType="code"/>
       <Param name="isTrials" updates="None" val="True" valType="bool"/>
       <Param name="loopType" updates="None" val="random" valType="str"/>
-      <Param name="nReps" updates="None" val="NUM_PALETTES" valType="code"/>
+      <Param name="nReps" updates="None" val="cur_num_palettes" valType="code"/>
       <Param name="name" updates="None" val="oo_palette" valType="code"/>
       <Param name="random seed" updates="None" val="" valType="code"/>
     </LoopInitiator>
