@@ -1,5 +1,4 @@
 # How to contribute to this repository
-
 This guide walks you through contributing using Visual Studio Code (VS Code). Each step shows both a **click-based** and a **terminal-based** approach — use whichever feels more natural to you.
 
 ---
@@ -129,6 +128,38 @@ Once approved, your supervisor will merge your changes and your branch will be d
 
 ---
 
+## Reporting bugs and problems via Issues
+
+If you notice something wrong with an experiment — a timing error, a crash, unexpected behaviour — report it as a GitHub **Issue** rather than sending an email. This keeps a documented history of all problems and fixes.
+
+### How to open an Issue
+
+Go to the repository on GitHub → **Issues** tab → **New Issue** → select the bug report template → fill it in → **Submit**.
+
+Your supervisor will be notified automatically and will respond in the Issue thread.
+
+### Linking an Issue to your fix
+
+When you fix a bug that has an Issue, reference it in your commit message using `fixes #` followed by the issue number (visible in the Issue URL, e.g. `#5`):
+
+**By clicking:**
+Type directly in the VS Code commit message box — typing `#` will autocomplete issue numbers
+
+**In the terminal:**
+```bash
+git commit -m "fix audio feedback on block 3, fixes #5"
+```
+
+When your Pull Request is merged, GitHub will automatically close the linked Issue — no extra steps needed.
+
+### Viewing Issues in VS Code
+- Click the **GitHub icon** in the left sidebar (cat logo)
+- You will see an **Issues** section listing all open issues alongside Pull Requests
+
+Note: to create a new Issue with the template, always use github.com — the VS Code panel does not support templates.
+
+---
+
 ## Important rules
 
 - **Never push directly to `main`** — always work on a branch and open a Pull Request
@@ -148,7 +179,36 @@ Once approved, your supervisor will merge your changes and your branch will be d
 | Commit | Source Control → message → ✓ Commit | `git commit -m "message"` |
 | Push to GitHub | Source Control → ⋯ → Push | `git push origin branch-name` |
 | Open a Pull Request | GitHub icon → Pull Requests → + | — (use GitHub.com) |
+| Report a bug | github.com → Issues → New Issue | — (use GitHub.com) |
+| View open issues | GitHub icon → Issues section | — |
 | View history | Git Graph icon in left sidebar | `git log --oneline` |
+
+---
+
+## Using the Wiki
+
+The Wiki is a space for documentation that does not belong in the code itself — experiment protocols, setup instructions, design decisions, known hardware quirks. Think of it as a shared lab notebook.
+
+### How to access it
+Go to the repository on GitHub → **Wiki** tab.
+
+### How to add or edit a page
+- Click **New Page** to create a page or click an existing page and then **Edit**
+- Write in plain text using the same Markdown formatting as this document (e.g. `##` for headings, `-` for bullet points)
+- Click **Save Page** when done
+
+### What belongs in the Wiki
+- Step-by-step instructions for setting up the experiment on a new computer
+- Description of each experiment's design and stimuli
+- Hardware setup (button box, triggers, monitor calibration)
+- Known issues or quirks that are not bugs per se but worth remembering
+- Links to relevant papers or pre-registrations
+
+### What does not belong in the Wiki
+- Code changes — those go through branches and Pull Requests as usual
+- Bug reports — those go in Issues
+
+The Wiki is not version-controlled in the same strict way as your code, so it is better suited for descriptive documentation than for anything that needs to be tracked precisely.
 
 ---
 
