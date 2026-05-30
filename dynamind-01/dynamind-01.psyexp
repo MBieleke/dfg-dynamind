@@ -1039,7 +1039,7 @@
         <Param val="False" valType="bool" updates="constant" name="forceEndRoutine"/>
         <Param val="1" valType="num" updates="constant" name="granularity"/>
         <Param val="" valType="code" updates="None" name="initVal"/>
-        <Param val="(&quot;&quot;,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="labels"/>
+        <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="labels"/>
         <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
         <Param val="rating_time" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
