@@ -1,3 +1,6 @@
 # Keep experiment output data local.
 experiment-*/data/
 *_lastrun.py
+dynamind-01/data/
+dynamind-02/data/
+
