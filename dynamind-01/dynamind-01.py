@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2026.1.3),
-    on May 25, 2026, at 12:04
+    on Oktober 08, 2026, at 14:22
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -284,7 +284,7 @@ def setupData(expInfo, dataDir=None):
     thisExp = data.ExperimentHandler(
         name=expName, version=expVersion,
         extraInfo=expInfo, runtimeInfo=None,
-        originPath='C:\\Users\\Maik Bieleke\\My Drive\\Labor\\dfg-dynamind\\dynamind-01\\dynamind-01.py',
+        originPath='C:\\Users\\PhD-s\\dfg-dynamind\\dynamind-01\\dynamind-01.py',
         savePickle=True, saveWideText=True,
         dataFileName=dataDir + os.sep + filename, sortColumns='time'
     )
@@ -420,7 +420,7 @@ def setupDevices(expInfo, thisExp, win):
     deviceManager.addDevice(
         deviceName='apparatus',
         deviceClass='psychopy.hardware.ApparatusDevice',
-        port='COM6',
+        port='COM4',
         baudrate='921600',
         simulate=False,
         debug=False
@@ -503,9 +503,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     thisSession : psychopy.session.Session or None
         Handle of the Session object this experiment is being run from, if any.
     """
-    # enter 'rush' mode (raise CPU priority)
-    if not PILOTING:
-        core.rush(enable=True)
     # mark experiment as started
     thisExp.status = STARTED
     # update experiment info
@@ -546,7 +543,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     NUM_MVC               = 2     # How many MVC trials to conduct
     NUM_BLOCKS            = 3     # How often each block within the domain is repeated
     NUM_LEVELS            = 4     # How often each level within the block is repeated
-    NUM_PALETTES_EXERCISE = 10    # for practice trials
+    NUM_PALETTES_EXERCISE = 12    # for practice trials
     NUM_PALETTES_REGULAR  = 24    # for main trials
     NUM_TARGETS           = 4     # How many targets appear in NUM_PALETTES palettes
     NUM_DISTRACTORS       = 8
@@ -560,7 +557,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()
     COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()
     
-    TOLERANCE = 15.0
+    FORCE_TOLERANCE_N = 15.0
     FORCE_BUFFER_LENGTH = 10
     FORCE_TOLERANCE_BUFFER = deque(maxlen = FORCE_BUFFER_LENGTH)
     
@@ -581,7 +578,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         force = np.asarray(force_samples)
         return round((np.mean(force - target_force) / target_force) * 100, 2)
     
-    def force_pct_in_range(force_samples, target_force, tolerance=TOLERANCE):
+    def force_pct_in_range(force_samples, target_force, tolerance = FORCE_TOLERANCE_N):
         """
         Percentage of samples within ±tolerance Newtons of target.
         """
@@ -691,14 +688,22 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             _target_amp = 0.0
             _target_freq = FREQ_LOW
     
-    def deviation_to_interval(deviation, min_dev = TOLERANCE, max_dev = TOLERANCE*2):
+    #def deviation_to_interval(deviation, min_dev = TOLERANCE, max_dev = TOLERANCE*2):
+    #    """Maps deviation to beep interval in seconds. Outside range = no beep."""
+    #    if deviation < min_dev:
+    #        return None  # in zone, silent
+    #    # clamp to max_dev, then map to interval range
+    #    dev_clamped = min(deviation, max_dev)
+    #    # linear map: 15N -> 1.0s interval, 30N -> 0.2s interval
+    #    t = (dev_clamped - min_dev) / (max_dev - min_dev)  # 0.0 to 1.0
+    #    return 1.0 - t * 0.8
+    
+    def deviation_to_interval(deviation, min_dev, max_dev):
         """Maps deviation to beep interval in seconds. Outside range = no beep."""
         if deviation < min_dev:
-            return None  # in zone, silent
-        # clamp to max_dev, then map to interval range
+            return None
         dev_clamped = min(deviation, max_dev)
-        # linear map: 15N -> 1.0s interval, 30N -> 0.2s interval
-        t = (dev_clamped - min_dev) / (max_dev - min_dev)  # 0.0 to 1.0
+        t = (dev_clamped - min_dev) / (max_dev - min_dev)
         return 1.0 - t * 0.8
     # Run 'Begin Experiment' code from setup_random
     # =============================================================================
@@ -848,7 +853,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         lines.append(f"Totals: {df_check[factor].value_counts().sort_index().to_dict()}")
     lines.append("\nTotal trials per block:")
     lines.append(df_check.groupby("block").size().to_string())
-    print("\n".join(lines))
+    # print("\n".join(lines))
     
     # =============================================================================
     # BUILD LONG FORMAT ROWS
@@ -888,7 +893,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         "d_prime":                  None,
                         "NRMSE":                    None,
                         "sBias":                    None,
-                        "pTWTR":                    None
+                        "pTWTR":                    None,
+                        "rpe_cognitive":            None,
+                        "rpe_physical":             None,
+                        "rpe_time":                 None,
+                        "rpe_boredom":              None
                     })
     
     # Create an index for fast lookup
@@ -1128,41 +1137,69 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     rating_dprime_text = visual.TextStim(win=win, name='rating_dprime_text',
         text='',
         font='Courier New',
-        pos=(-0.2, 0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        pos=(-0.4, 0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-1.0);
-    rating_physical_text = visual.TextStim(win=win, name='rating_physical_text',
-        text='Körperliche Anstrengung',
-        font='Courier New',
-        pos=(0.4, -0.1), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
-        color='white', colorSpace='rgb', opacity=None, 
-        languageStyle='LTR',
-        depth=-2.0);
-    rating_physical = visual.Slider(win=win, name='rating_physical',
-        startValue=None, size=(0.5, 0.075), pos=(0.4, -0.2), units=win.units,
-        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
-        style='rating', styleTweaks=['triangleMarker'], opacity=None,
-        labelColor='LightGray', markerColor='Red', lineColor='White', colorSpace='rgb',
-        font='Noto Sans', labelHeight=0.025,
-        flip=False, ori=0.0, depth=-3, readOnly=False)
     rating_cognitive_text = visual.TextStim(win=win, name='rating_cognitive_text',
         text='Kognitive Anstrengung',
         font='Courier New',
-        pos=(0.4, 0.3), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
-        color='white', colorSpace='rgb', opacity=None, 
+        pos=(0.3, 0.4), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        color=(-1.0000, -0.2157, -1.0000), colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
-        depth=-4.0);
+        depth=-2.0);
     rating_cognitive = visual.Slider(win=win, name='rating_cognitive',
-        startValue=None, size=(0.5, 0.075), pos=(0.4, 0.2), units=win.units,
+        startValue=None, size=(0.75, 0.075), pos=(0.3, 0.33), units=win.units,
         labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
         style='rating', styleTweaks=['triangleMarker'], opacity=None,
-        labelColor='LightGray', markerColor='Red', lineColor='White', colorSpace='rgb',
+        labelColor=(-1.0000, -0.2157, -1.0000), markerColor=(-1.0000, -0.2157, -1.0000), lineColor=(-1.0000, -0.2157, -1.0000), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-3, readOnly=False)
+    rating_physical_text = visual.TextStim(win=win, name='rating_physical_text',
+        text='Körperliche Anstrengung',
+        font='Courier New',
+        pos=(0.3, 0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        color=(0.0902, -1.0000, -1.0000), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-4.0);
+    rating_physical = visual.Slider(win=win, name='rating_physical',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, 0.13), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(0.0902, -1.0000, -1.0000), markerColor=(0.0902, -1.0000, -1.0000), lineColor=(0.0902, -1.0000, -1.0000), colorSpace='rgb',
         font='Noto Sans', labelHeight=0.025,
         flip=False, ori=0.0, depth=-5, readOnly=False)
+    rating_boredom_text = visual.TextStim(win=win, name='rating_boredom_text',
+        text='Langeweile',
+        font='Courier New',
+        pos=(0.3, 0.0), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        color=(0.1608, -1.0000, 0.6549), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-6.0);
+    rating_boredom = visual.Slider(win=win, name='rating_boredom',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, -0.07), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(0.1608, -1.0000, 0.6549), markerColor=(0.1608, -1.0000, 0.6549), lineColor=(0.1608, -1.0000, 0.6549), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-7, readOnly=False)
+    rating_time_text = visual.TextStim(win=win, name='rating_time_text',
+        text='Zeitwahrnehmung',
+        font='Courier New',
+        pos=(0.3, -0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        color=(1.0000, 0.0980, -1.0000), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-8.0);
+    rating_time = visual.Slider(win=win, name='rating_time',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, -0.27), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(1.0000, 0.0980, -1.0000), markerColor=(1.0000, 0.0980, -1.0000), lineColor=(1.0000, 0.0980, -1.0000), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-9, readOnly=False)
     rating_continue_button = visual.ButtonStim(win, 
         text='WEITER', font='Courier New',
-        pos=(-0.2, -0.2),
+        pos=(-0.4, -0.2),
         letterHeight=0.035,
         size=(0.25, 0.1), 
         ori=0.0
@@ -1174,7 +1211,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         padding=None,
         anchor='center',
         name='rating_continue_button',
-        depth=-6
+        depth=-10
     )
     rating_continue_button.buttonClock = core.Clock()
     
@@ -2365,15 +2402,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if thisSession is not None:
                     # if running in a Session with a Liaison client, send data up to now
                     thisSession.sendExperimentData()
-                # get names of stimulus parameters
-                if oo_mvc_rep.trialList in ([], [None], None):
-                    params = []
-                else:
-                    params = oo_mvc_rep.trialList[0].keys()
-                # save data for this loop
-                oo_mvc_rep.saveAsExcel(filename + '.xlsx', sheetName='oo_mvc_rep',
-                    stimOut=params,
-                    dataOut=['n','all_mean','all_std', 'all_raw'])
                 # mark thisOo_mvc_type as finished
                 if hasattr(thisOo_mvc_type, 'status'):
                     thisOo_mvc_type.status = FINISHED
@@ -2395,15 +2423,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             if thisSession is not None:
                 # if running in a Session with a Liaison client, send data up to now
                 thisSession.sendExperimentData()
-            # get names of stimulus parameters
-            if oo_mvc_type.trialList in ([], [None], None):
-                params = []
-            else:
-                params = oo_mvc_type.trialList[0].keys()
-            # save data for this loop
-            oo_mvc_type.saveAsExcel(filename + '.xlsx', sheetName='oo_mvc_type',
-                stimOut=params,
-                dataOut=['n','all_mean','all_std', 'all_raw'])
             # mark thisYn_mvc as finished
             if hasattr(thisYn_mvc, 'status'):
                 thisYn_mvc.status = FINISHED
@@ -2425,15 +2444,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if thisSession is not None:
             # if running in a Session with a Liaison client, send data up to now
             thisSession.sendExperimentData()
-        # get names of stimulus parameters
-        if yn_mvc.trialList in ([], [None], None):
-            params = []
-        else:
-            params = yn_mvc.trialList[0].keys()
-        # save data for this loop
-        yn_mvc.saveAsExcel(filename + '.xlsx', sheetName='yn_mvc',
-            stimOut=params,
-            dataOut=['n','all_mean','all_std', 'all_raw'])
         
         # set up handler to look after randomisation of conditions etc
         yn_block = data.TrialHandler2(
@@ -2882,9 +2892,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 _last_beep_t = 0
                 
                 force_nrmse_buffer = []
-                target_pmvc    = cur_physical_demand_level * mvc
-                lower_threshold = max(target_pmvc - TOLERANCE, 0)
-                upper_threshold = target_pmvc + TOLERANCE
+                target_pmvc = cur_physical_demand_level * mvc
+                lower_threshold = max(target_pmvc - FORCE_TOLERANCE_N, 0)
+                upper_threshold = target_pmvc + FORCE_TOLERANCE_N
                 
                 toneState    = 0
                 _lastSwitchT = -1e9
@@ -2927,7 +2937,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # --- Run Routine "rr_target" ---
                 thisExp.currentRoutine = rr_target
                 rr_target.forceEnded = routineForceEnded = not continueRoutine
-                while continueRoutine and routineTimer.getTime() < 3.0:
+                while continueRoutine and routineTimer.getTime() < 3.5:
                     # if trial has changed, end Routine now
                     if hasattr(thisOo_level, 'status') and thisOo_level.status == STOPPING:
                         continueRoutine = False
@@ -2952,6 +2962,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         force_nrmse_buffer.append(smooth_force)
                         nrmse = force_nrmse(force_nrmse_buffer, target_pmvc)
                         sbias = force_bias(force_nrmse_buffer, target_pmvc)
+                        # ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                         ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                         
                         if len(FORCE_TOLERANCE_BUFFER) >= FORCE_BUFFER_LENGTH:
@@ -3104,7 +3115,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # if target_display is stopping this frame...
                     if target_display.status == STARTED:
                         # is it time to stop? (based on global clock, using actual start)
-                        if tThisFlipGlobal > target_display.tStartRefresh + 3.0-frameTolerance:
+                        if tThisFlipGlobal > target_display.tStartRefresh + 3.5-frameTolerance:
                             # keep track of stop time/frame for later
                             target_display.tStop = t  # not accounting for scr refresh
                             target_display.tStopRefresh = tThisFlipGlobal  # on global time
@@ -3195,7 +3206,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 elif rr_target.forceEnded:
                     routineTimer.reset()
                 else:
-                    routineTimer.addTime(-3.000000)
+                    routineTimer.addTime(-3.500000)
                 
                 # set up handler to look after randomisation of conditions etc
                 oo_palette = data.TrialHandler2(
@@ -3256,9 +3267,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # =============================================================================
                     # AUDIO - BEGIN ROUTINE
                     # =============================================================================
-                    target_pmvc    = cur_physical_demand_level * mvc
-                    lower_threshold = max(target_pmvc - TOLERANCE, 0)
-                    upper_threshold = target_pmvc + TOLERANCE
+                    target_pmvc = cur_physical_demand_level * mvc
+                    lower_threshold = max(target_pmvc - FORCE_TOLERANCE_N, 0)
+                    upper_threshold = target_pmvc + FORCE_TOLERANCE_N
                     
                     toneState    = 0
                     _lastSwitchT = -1e9
@@ -3320,6 +3331,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             force_nrmse_buffer.append(smooth_force)
                             nrmse = force_nrmse(force_nrmse_buffer, target_pmvc)
                             sbias = force_bias(force_nrmse_buffer, target_pmvc)
+                            # ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                             ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                             
                             if len(FORCE_TOLERANCE_BUFFER) >= FORCE_BUFFER_LENGTH:
@@ -3606,6 +3618,13 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         rows[i]["is_false_alarm"]       = is_false_alarm
                         rows[i]["is_miss"]              = is_miss
                         rows[i]["is_correct_rejection"] = is_correct_rejection
+                        
+                    # tsv- issue
+                    print("========== REACHED FORCE TSV SAVE ==========")
+                    print("maxforce buffer:", len(maxforce_force_raw_buffer))
+                    print("target buffer:", len(target_force_raw_buffer))
+                    print("trial buffer:", len(trial_force_raw_buffer))
+                    print("=============================================")
                     if False and not trial_lights_led_off_sent:
                         trial_lights.turnOffLights("inner")
                     if trial_reed._reed_measuring:   trial_reed.stopReedMeasurement()
@@ -3676,21 +3695,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if thisSession is not None:
                     # if running in a Session with a Liaison client, send data up to now
                     thisSession.sendExperimentData()
-                # get names of stimulus parameters
-                if oo_palette.trialList in ([], [None], None):
-                    params = []
-                else:
-                    params = oo_palette.trialList[0].keys()
-                # save data for this loop
-                oo_palette.saveAsExcel(filename + '.xlsx', sheetName='oo_palette',
-                    stimOut=params,
-                    dataOut=['n','all_mean','all_std', 'all_raw'])
                 
                 # --- Prepare to start Routine "rr_rating" ---
                 # create an object to store info about Routine rr_rating
                 rr_rating = data.Routine(
                     name='rr_rating',
-                    components=[rating_dprime_text, rating_physical_text, rating_physical, rating_cognitive_text, rating_cognitive, rating_continue_button],
+                    components=[rating_dprime_text, rating_cognitive_text, rating_cognitive, rating_physical_text, rating_physical, rating_boredom_text, rating_boredom, rating_time_text, rating_time, rating_continue_button],
                 )
                 rr_rating.status = NOT_STARTED
                 continueRoutine = True
@@ -3700,12 +3710,20 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 mute_audio()
                 
                 # dprime Calculation
-                H = hits + misses
-                F = false_alarms + correct_rejections
+                N_signal = hits + misses
+                N_noise = false_alarms + correct_rejections
                 
-                hit_rate = (hits+0.5)/(H+1) if H>0 else 0.5
-                fa_rate = (false_alarms+0.5)/(F+1) if F>0 else 0.5
+                hit_rate = (hits + 0.5)/(N_signal + 1)
+                fa_rate = (false_alarms + 0.5)/(N_noise + 1)
+                
                 d_prime = norm.ppf(hit_rate) - norm.ppf(fa_rate)
+                
+                #H = hits + misses
+                #F = false_alarms + correct_rejections
+                
+                #hit_rate = (hits+0.5)/(H+1) if H>0 else 0.5
+                #fa_rate = (false_alarms+0.5)/(F+1) if F>0 else 0.5
+                #d_prime = norm.ppf(hit_rate) - norm.ppf(fa_rate)
                 
                 currentLoop.addData('d_prime', d_prime)
                 
@@ -3721,12 +3739,13 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         rows[i]["sBias"]              = sbias
                         rows[i]["pTWTR"]              = ptwtr
                 
-                
                 # ===== DISPLAY SETUP =====
                 # rating_dprime_text.alignText = "left"
                 rating_dprime_text.bold = True
                 rating_physical_text.bold = True
                 rating_cognitive_text.bold = True
+                rating_time_text.bold = True
+                rating_boredom_text.bold = True
                 
                 feedback_display_text = (
                     f"==== PERFORMANCE ====\n"
@@ -3740,13 +3759,16 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     f"Bias:          {sbias:+5.0f}\n"
                     f"pTWR:          {ptwtr:5.0f}\n"
                     f"====================="
+                    + (f"\n⚠ WARNING: pTWR below 50!" if ptwtr < 50 else "")
                 )
                 
                 # ===== DATA DUMPING =====
                 pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_data.csv', index=False)
                 rating_dprime_text.setText(feedback_display_text)
-                rating_physical.reset()
                 rating_cognitive.reset()
+                rating_physical.reset()
+                rating_boredom.reset()
+                rating_time.reset()
                 # reset rating_continue_button to account for continued clicks & clear times on/off
                 rating_continue_button.reset()
                 # store start times for rr_rating
@@ -3786,7 +3808,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # Check whether experimenter has entered both ratings
                     is_ratings_complete = (
                         rating_physical.getRating() is not None and
-                        rating_cognitive.getRating() is not None
+                        rating_cognitive.getRating() is not None and
+                        rating_time.getRating() is not None and
+                        rating_boredom.getRating() is not None
                     )
                     
                     # *rating_dprime_text* updates
@@ -3806,6 +3830,46 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     
                     # if rating_dprime_text is active this frame...
                     if rating_dprime_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_cognitive_text* updates
+                    
+                    # if rating_cognitive_text is starting this frame...
+                    if rating_cognitive_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_cognitive_text.frameNStart = frameN  # exact frame index
+                        rating_cognitive_text.tStart = t  # local t and not account for scr refresh
+                        rating_cognitive_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_cognitive_text, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_cognitive_text.started')
+                        # update status
+                        rating_cognitive_text.status = STARTED
+                        rating_cognitive_text.setAutoDraw(True)
+                    
+                    # if rating_cognitive_text is active this frame...
+                    if rating_cognitive_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_cognitive* updates
+                    
+                    # if rating_cognitive is starting this frame...
+                    if rating_cognitive.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_cognitive.frameNStart = frameN  # exact frame index
+                        rating_cognitive.tStart = t  # local t and not account for scr refresh
+                        rating_cognitive.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_cognitive, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_cognitive.started')
+                        # update status
+                        rating_cognitive.status = STARTED
+                        rating_cognitive.setAutoDraw(True)
+                    
+                    # if rating_cognitive is active this frame...
+                    if rating_cognitive.status == STARTED:
                         # update params
                         pass
                     
@@ -3849,43 +3913,83 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         # update params
                         pass
                     
-                    # *rating_cognitive_text* updates
+                    # *rating_boredom_text* updates
                     
-                    # if rating_cognitive_text is starting this frame...
-                    if rating_cognitive_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # if rating_boredom_text is starting this frame...
+                    if rating_boredom_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
                         # keep track of start time/frame for later
-                        rating_cognitive_text.frameNStart = frameN  # exact frame index
-                        rating_cognitive_text.tStart = t  # local t and not account for scr refresh
-                        rating_cognitive_text.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_cognitive_text, 'tStartRefresh')  # time at next scr refresh
+                        rating_boredom_text.frameNStart = frameN  # exact frame index
+                        rating_boredom_text.tStart = t  # local t and not account for scr refresh
+                        rating_boredom_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_boredom_text, 'tStartRefresh')  # time at next scr refresh
                         # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_cognitive_text.started')
+                        thisExp.timestampOnFlip(win, 'rating_boredom_text.started')
                         # update status
-                        rating_cognitive_text.status = STARTED
-                        rating_cognitive_text.setAutoDraw(True)
+                        rating_boredom_text.status = STARTED
+                        rating_boredom_text.setAutoDraw(True)
                     
-                    # if rating_cognitive_text is active this frame...
-                    if rating_cognitive_text.status == STARTED:
+                    # if rating_boredom_text is active this frame...
+                    if rating_boredom_text.status == STARTED:
                         # update params
                         pass
                     
-                    # *rating_cognitive* updates
+                    # *rating_boredom* updates
                     
-                    # if rating_cognitive is starting this frame...
-                    if rating_cognitive.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # if rating_boredom is starting this frame...
+                    if rating_boredom.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
                         # keep track of start time/frame for later
-                        rating_cognitive.frameNStart = frameN  # exact frame index
-                        rating_cognitive.tStart = t  # local t and not account for scr refresh
-                        rating_cognitive.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_cognitive, 'tStartRefresh')  # time at next scr refresh
+                        rating_boredom.frameNStart = frameN  # exact frame index
+                        rating_boredom.tStart = t  # local t and not account for scr refresh
+                        rating_boredom.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_boredom, 'tStartRefresh')  # time at next scr refresh
                         # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_cognitive.started')
+                        thisExp.timestampOnFlip(win, 'rating_boredom.started')
                         # update status
-                        rating_cognitive.status = STARTED
-                        rating_cognitive.setAutoDraw(True)
+                        rating_boredom.status = STARTED
+                        rating_boredom.setAutoDraw(True)
                     
-                    # if rating_cognitive is active this frame...
-                    if rating_cognitive.status == STARTED:
+                    # if rating_boredom is active this frame...
+                    if rating_boredom.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_time_text* updates
+                    
+                    # if rating_time_text is starting this frame...
+                    if rating_time_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_time_text.frameNStart = frameN  # exact frame index
+                        rating_time_text.tStart = t  # local t and not account for scr refresh
+                        rating_time_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_time_text, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_time_text.started')
+                        # update status
+                        rating_time_text.status = STARTED
+                        rating_time_text.setAutoDraw(True)
+                    
+                    # if rating_time_text is active this frame...
+                    if rating_time_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_time* updates
+                    
+                    # if rating_time is starting this frame...
+                    if rating_time.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_time.frameNStart = frameN  # exact frame index
+                        rating_time.tStart = t  # local t and not account for scr refresh
+                        rating_time.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_time, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_time.started')
+                        # update status
+                        rating_time.status = STARTED
+                        rating_time.setAutoDraw(True)
+                    
+                    # if rating_time is active this frame...
+                    if rating_time.status == STARTED:
                         # update params
                         pass
                     # *rating_continue_button* updates
@@ -3974,10 +4078,16 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
                             rows[i]["rpe_cognitive"] = rating_cognitive.getRating()
                             rows[i]["rpe_physical"]  = rating_physical.getRating()
-                oo_level.addData('rating_physical.response', rating_physical.getRating())
-                oo_level.addData('rating_physical.rt', rating_physical.getRT())
+                            rows[i]["rpe_time"]      = rating_time.getRating()
+                            rows[i]["rpe_boredom"]   = rating_boredom.getRating()
                 oo_level.addData('rating_cognitive.response', rating_cognitive.getRating())
                 oo_level.addData('rating_cognitive.rt', rating_cognitive.getRT())
+                oo_level.addData('rating_physical.response', rating_physical.getRating())
+                oo_level.addData('rating_physical.rt', rating_physical.getRT())
+                oo_level.addData('rating_boredom.response', rating_boredom.getRating())
+                oo_level.addData('rating_boredom.rt', rating_boredom.getRT())
+                oo_level.addData('rating_time.response', rating_time.getRating())
+                oo_level.addData('rating_time.rt', rating_time.getRT())
                 oo_level.addData('rating_continue_button.numClicks', rating_continue_button.numClicks)
                 if rating_continue_button.numClicks:
                    oo_level.addData('rating_continue_button.timesOn', rating_continue_button.timesOn)
@@ -4008,15 +4118,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             if thisSession is not None:
                 # if running in a Session with a Liaison client, send data up to now
                 thisSession.sendExperimentData()
-            # get names of stimulus parameters
-            if oo_level.trialList in ([], [None], None):
-                params = []
-            else:
-                params = oo_level.trialList[0].keys()
-            # save data for this loop
-            oo_level.saveAsExcel(filename + '.xlsx', sheetName='oo_level',
-                stimOut=params,
-                dataOut=['n','all_mean','all_std', 'all_raw'])
             # mark thisYn_block as finished
             if hasattr(thisYn_block, 'status'):
                 thisYn_block.status = FINISHED
@@ -4038,15 +4139,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if thisSession is not None:
             # if running in a Session with a Liaison client, send data up to now
             thisSession.sendExperimentData()
-        # get names of stimulus parameters
-        if yn_block.trialList in ([], [None], None):
-            params = []
-        else:
-            params = yn_block.trialList[0].keys()
-        # save data for this loop
-        yn_block.saveAsExcel(filename + '.xlsx', sheetName='yn_block',
-            stimOut=params,
-            dataOut=['n','all_mean','all_std', 'all_raw'])
         # mark thisOo_block as finished
         if hasattr(thisOo_block, 'status'):
             thisOo_block.status = FINISHED
@@ -4068,15 +4160,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     if thisSession is not None:
         # if running in a Session with a Liaison client, send data up to now
         thisSession.sendExperimentData()
-    # get names of stimulus parameters
-    if oo_block.trialList in ([], [None], None):
-        params = []
-    else:
-        params = oo_block.trialList[0].keys()
-    # save data for this loop
-    oo_block.saveAsExcel(filename + '.xlsx', sheetName='oo_block',
-        stimOut=params,
-        dataOut=['n','all_mean','all_std', 'all_raw'])
     
     # --- Prepare to start Routine "rr_finish" ---
     # create an object to store info about Routine rr_finish
@@ -4204,27 +4287,31 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     thisExp.nextEntry()
     if True and maxforce_force_raw_buffer:
         _raw_path = thisExp.dataFileName + '_force_long.tsv'
-        with open(_raw_path, 'w', encoding='utf-8') as _f:
-            _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
+        _write_header = not os.path.exists(_raw_path)
+        with open(_raw_path, 'a', encoding='utf-8') as _f:
+            if _write_header:
+                _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
             for _row in maxforce_force_raw_buffer:
                 _f.write('\t'.join(str(_row[_k]) for _k in ['participant','session','routine','component','trial_index','trial_name','identifier','sample_index','white_time','blue_time','time','white_force','blue_force','white_force_raw_counts','blue_force_raw_counts']) + '\n')
     if True and target_force_raw_buffer:
         _raw_path = thisExp.dataFileName + '_force_long.tsv'
-        with open(_raw_path, 'w', encoding='utf-8') as _f:
-            _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
+        _write_header = not os.path.exists(_raw_path)
+        with open(_raw_path, 'a', encoding='utf-8') as _f:
+            if _write_header:
+                _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
             for _row in target_force_raw_buffer:
                 _f.write('\t'.join(str(_row[_k]) for _k in ['participant','session','routine','component','trial_index','trial_name','identifier','sample_index','white_time','blue_time','time','white_force','blue_force','white_force_raw_counts','blue_force_raw_counts']) + '\n')
     if True and trial_force_raw_buffer:
         _raw_path = thisExp.dataFileName + '_force_long.tsv'
-        with open(_raw_path, 'w', encoding='utf-8') as _f:
-            _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
+        _write_header = not os.path.exists(_raw_path)
+        with open(_raw_path, 'a', encoding='utf-8') as _f:
+            if _write_header:
+                _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
             for _row in trial_force_raw_buffer:
                 _f.write('\t'.join(str(_row[_k]) for _k in ['participant','session','routine','component','trial_index','trial_name','identifier','sample_index','white_time','blue_time','time','white_force','blue_force','white_force_raw_counts','blue_force_raw_counts']) + '\n')
     
     # mark experiment as finished
     endExperiment(thisExp, win=win)
-    # end 'rush' mode
-    core.rush(enable=False)
 
 
 def saveData(thisExp):
