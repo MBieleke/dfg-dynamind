@@ -755,7 +755,7 @@
         <Param val="None" valType="str" updates="constant" name="flip"/>
         <Param val="Courier New" valType="str" updates="constant" name="font"/>
         <Param val="LTR" valType="str" updates="None" name="languageStyle"/>
-        <Param val="0.035" valType="num" updates="constant" name="letterHeight"/>
+        <Param val="0.025" valType="num" updates="constant" name="letterHeight"/>
         <Param val="rating_dprime_text" valType="code" updates="None" name="name"/>
         <Param val="" valType="num" updates="constant" name="opacity"/>
         <Param val="0" valType="num" updates="constant" name="ori"/>
@@ -960,7 +960,7 @@
         <Param val="['triangleMarker']" valType="list" updates="constant" name="styleTweaks"/>
         <Param val="rating" valType="str" updates="constant" name="styles"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
-        <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="ticks"/>
+        <Param val="(-5,-4,-3,-2,-1,0,1,2,3,4,5)" valType="list" updates="constant" name="ticks"/>
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
       </SliderComponent>
@@ -1024,7 +1024,7 @@
         <Param val="['triangleMarker']" valType="list" updates="constant" name="styleTweaks"/>
         <Param val="rating" valType="str" updates="constant" name="styles"/>
         <Param val="True" valType="bool" updates="None" name="syncScreenRefresh"/>
-        <Param val="(0,1,2,3,4,5,6,7,8,9,10)" valType="list" updates="constant" name="ticks"/>
+        <Param val="(-5,-4,-3,-2,-1,0,1,2,3,4,5)" valType="list" updates="constant" name="ticks"/>
         <Param val="from exp settings" valType="str" updates="None" name="units"/>
         <Param val="" valType="code" updates="None" name="validator"/>
       </SliderComponent>

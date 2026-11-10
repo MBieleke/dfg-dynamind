@@ -1,8 +1,8 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 This experiment was created using PsychoPy3 Experiment Builder (v2026.1.3),
-    on May 25, 2026, at 12:04
+    on November 10, 2026, at 14:13
 If you publish work using this script the most relevant publication is:
 
     Peirce J, Gray JR, Simpson S, MacAskill M, Höchenberger R, Sogo H, Kastman E, Lindeløv JK. (2019) 
@@ -43,6 +43,7 @@ import threading
 import pandas as pd
 from collections import deque
 import hashlib
+import itertools
 
 # IMPORT SUBMODULES ----
 # from scipy.stats import truncnorm, nur bei truncated normal distribution
@@ -190,7 +191,7 @@ deviceManager = hardware.DeviceManager()
 _thisDir = os.path.dirname(os.path.abspath(__file__))
 # store info about the experiment session
 psychopyVersion = '2026.1.3'
-expName = 'dynamind-01'  # from the Builder filename that created this script
+expName = 'dynamind-02'  # from the Builder filename that created this script
 expVersion = '1.0.0'
 # a list of functions to run when the experiment ends (starts off blank)
 runAtExit = []
@@ -199,6 +200,7 @@ expInfo = {
     'participant': f"{randint(0, 999999):06.0f}",
     'session': '001',
     'speedrun': False,
+    'pilot_mode': False,
     'date|hid': data.getDateStr(),
     'expName|hid': expName,
     'expVersion|hid': expVersion,
@@ -284,7 +286,7 @@ def setupData(expInfo, dataDir=None):
     thisExp = data.ExperimentHandler(
         name=expName, version=expVersion,
         extraInfo=expInfo, runtimeInfo=None,
-        originPath='C:\\Users\\Maik Bieleke\\My Drive\\Labor\\dfg-dynamind\\dynamind-01\\dynamind-01.py',
+        originPath='C:\\Users\\PhD-s\\dfg-dynamind\\dynamind-02\\dynamind-02.py',
         savePickle=True, saveWideText=True,
         dataFileName=dataDir + os.sep + filename, sortColumns='time'
     )
@@ -420,7 +422,7 @@ def setupDevices(expInfo, thisExp, win):
     deviceManager.addDevice(
         deviceName='apparatus',
         deviceClass='psychopy.hardware.ApparatusDevice',
-        port='COM6',
+        port='COM5',
         baudrate='921600',
         simulate=False,
         debug=False
@@ -503,9 +505,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     thisSession : psychopy.session.Session or None
         Handle of the Session object this experiment is being run from, if any.
     """
-    # enter 'rush' mode (raise CPU priority)
-    if not PILOTING:
-        core.rush(enable=True)
     # mark experiment as started
     thisExp.status = STARTED
     # update experiment info
@@ -544,23 +543,45 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     # Run 'Begin Experiment' code from setup_constants
     # DEFINITIONS AND CONSTANTS ----
     NUM_MVC               = 2     # How many MVC trials to conduct
-    NUM_BLOCKS            = 3     # How often each block within the domain is repeated
-    NUM_LEVELS            = 4     # How often each level within the block is repeated
-    NUM_PALETTES_EXERCISE = 10    # for practice trials
+    NUM_BLOCKS            = 3     # How often each block with 2x all reward_ratios is repeated
+    #NUM_BLOCKS_total      = 4     # NUM_BLOCKS + 1, bc we want to use loop logic to repeat MVC measures # so far not used, necssary for post mvc?
+    NUM_LEVELS            = 4     # How often each level within the block is repeated (kann ausgeklammert werden?)
+    NUM_TRIALS            = 14      # How many reward level within the block are presented #
+    NUM_PALETTES_EXERCISE = 12    # for practice trials
     NUM_PALETTES_REGULAR  = 24    # for main trials
     NUM_TARGETS           = 4     # How many targets appear in NUM_PALETTES palettes
     NUM_DISTRACTORS       = 8
     NON_TARGET_PALETTES   = [2, 2] # the first and last x palettes that never contain a target
+    NUM_HOLES             = 20
+    NUM_REWARD_TRIALS = (NUM_BLOCKS -1) * NUM_TRIALS  # 42
+    
+    # Fixed task demands (also used during practice)
+    COGNITIVE_DEMAND = 20
+    PHYSICAL_DEMAND = 0.30
     
     # MIN, MAX, AND RANGE OF COGNITIVE AND PHYSICAL DEMAND
-    PHYSICAL_DEMAND_MIN     = 0.03
+    PHYSICAL_DEMAND_MIN     = 0.03 # to stay within moderate demand levels
     PHYSICAL_DEMAND_MAX     = 0.40
     COGNITIVE_DEMAND_MIN    = 70
     COGNITIVE_DEMAND_MAX    = 10
-    PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()
-    COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()
     
-    TOLERANCE = 15.0
+    # practice levels
+    COGNITIVE_PRACTICE_LEVELS = [20, 20, 20, 20]
+    PHYSICAL_PRACTICE_LEVELS  = [0.3, 0.3, 0.3, 0.3]
+    
+    # MEAN & SD for random sampling following random unified sampling procedure
+    # Physical demand: random uniform sampling
+    PHYSICAL_DEMAND_LEVELS = np.round(
+        np.random.uniform(0.15, 0.28, NUM_TRIALS), 3
+    ).tolist()
+    
+    # Cognitive demand: random uniform sampling
+    COGNITIVE_DEMAND_LEVELS = np.round(
+        np.random.uniform(30, 50, NUM_TRIALS), 1
+    ).tolist()
+    
+    
+    FORCE_TOLERANCE_N = 15.0
     FORCE_BUFFER_LENGTH = 10
     FORCE_TOLERANCE_BUFFER = deque(maxlen = FORCE_BUFFER_LENGTH)
     
@@ -581,7 +602,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         force = np.asarray(force_samples)
         return round((np.mean(force - target_force) / target_force) * 100, 2)
     
-    def force_pct_in_range(force_samples, target_force, tolerance=TOLERANCE):
+    def force_pct_in_range(force_samples, target_force, tolerance = FORCE_TOLERANCE_N):
         """
         Percentage of samples within ±tolerance Newtons of target.
         """
@@ -591,15 +612,47 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         return round(np.mean((force >= lower) & (force <= upper)) * 100, 2)
     
     # TARGET COLORS ----
-    TARGET_COLORS_RGB255 = [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+    TARGET_COLORS_RGB255 = [[0, 255, 0], [0, 0, 255]]
     COLOR_NAMES = {
-        (255, 0, 0):   "Red",
+        #(255, 0, 0):   "Red",
         (0, 255, 0):   "Green",
         (0, 0, 255):   "Blue",
     }
     
     INNER_HOLES = list(range(8))
     OUTER_HOLES = list(range(9, 21))
+    
+    # REWARD  ----
+    # REWARD HOLES
+    REWARD_HOLES_PHYSICAL = list(range(5, 9)) + list(range(15, 21)) + list(reversed(range(9,15))) + list(reversed(range(1,5)))
+    REWARD_HOLES_COGNITIVE = list(range(1, 5)) + list(range(9, 15)) + list(reversed(range(5, 9))) + list(reversed(range(15, 21)))
+    
+    # Convert actual hole numbers (1-10) to physthon indices
+    physical_indices = [hole - 1 for hole in REWARD_HOLES_PHYSICAL]
+    cognitive_indices = [hole - 1 for hole in REWARD_HOLES_COGNITIVE]
+    
+    # REWARD COLORS
+    REWARD_COLOR_PHYSICAL = [128,0,128] # purple
+    REWARD_COLOR_COGNITIVE = [255, 255, 0] # yellow
+    REWARD_COLOR_NON = [0, 0, 0]
+    reference_hole = [REWARD_COLOR_NON]
+    
+    # set total points counters to zero
+    total_physical_points  = 0
+    total_cognitive_points = 0
+    physical_points_selected = 0
+    cognitive_points_selected = 0
+    
+    # REWARD SAMPLING
+    #Reward design
+    TOTAL_REWARDS = [6, 12, 18]
+    REWARD_RATIOS = np.linspace(0, 1, 7).tolist()
+    point_value = 0.26
+    
+    # Ratio = proportion allocated to the PHYSICAL domain
+    # Cognitive reward = remaining proportion
+    assert len(TOTAL_REWARDS) * len(REWARD_RATIOS) * 2 == 42
+    assert NUM_BLOCKS * NUM_TRIALS == 42
     
     # TIMING CONSTANTS ----
     PALETTE_DURATION_SEC = 0.416
@@ -615,17 +668,37 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     AMP_SMOOTH  = 0.1
     STATE_HOLD  = 0.1
     
-    # SPEEDRUN MODE ----
-    speedrun = expInfo['speedrun']
+    # =============================================================================
+    # EXPERIMENT MODES
+    # =============================================================================
+    
+    pilot_mode = bool(expInfo.get('pilot_mode', False))
+    
+    # Pilot Mode hat Vorrang vor Speedrun.
+    speedrun = bool(expInfo['speedrun']) and not pilot_mode
+    
+    print("\n========== EXPERIMENT MODE ==========")
+    print("Pilot Mode:", pilot_mode)
+    print("Speedrun:", speedrun)
+    print("=====================================\n")
+    
     if speedrun:
-        NUM_BLOCKS            = 1
-        NUM_LEVELS            = 2
+        NUM_BLOCKS = 3
+        NUM_LEVELS = 2
         NUM_PALETTES_EXERCISE = 5
-        NUM_PALETTES_REGULAR  = 5
-        NUM_TARGETS           = 1
-        
-        PHYSICAL_DEMAND_LEVELS  = np.round(np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2).tolist()
-        COGNITIVE_DEMAND_LEVELS = np.round(np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2).tolist()
+        NUM_PALETTES_REGULAR = 5
+        NUM_TARGETS = 1
+    
+        #PHYSICAL_DEMAND_LEVELS = np.round(
+        #    np.linspace(PHYSICAL_DEMAND_MIN, PHYSICAL_DEMAND_MAX, NUM_LEVELS), 2
+        #).tolist()
+    
+        #COGNITIVE_DEMAND_LEVELS = np.round(
+        #    np.linspace(COGNITIVE_DEMAND_MIN, COGNITIVE_DEMAND_MAX, NUM_LEVELS), 2
+        #).tolist()
+    
+        # Ein Test-Trial für jedes Gesamt-Reward-Level
+        SPEEDRUN_TOTALS = [6, 12, 18]
         
     # RANDOMNESS ----
     def seed_from_participant_id(pid):
@@ -644,6 +717,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     
     # Seed NumPy legacy RNG (used by np.random and imported randint/shuffle/etc.)
     np.random.seed(GLOBAL_SEED)
+    
+    
     # Run 'Begin Experiment' code from setup_audio
     global _state_lock, _target_freq, _target_amp, _cur_amp, _phase, _stream
     
@@ -691,22 +766,46 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             _target_amp = 0.0
             _target_freq = FREQ_LOW
     
-    def deviation_to_interval(deviation, min_dev = TOLERANCE, max_dev = TOLERANCE*2):
+    #def deviation_to_interval(deviation, min_dev = TOLERANCE, max_dev = TOLERANCE*2):
+    #    """Maps deviation to beep interval in seconds. Outside range = no beep."""
+    #    if deviation < min_dev:
+    #        return None  # in zone, silent
+    #    # clamp to max_dev, then map to interval range
+    #    dev_clamped = min(deviation, max_dev)
+    #    # linear map: 15N -> 1.0s interval, 30N -> 0.2s interval
+    #    t = (dev_clamped - min_dev) / (max_dev - min_dev)  # 0.0 to 1.0
+    #    return 1.0 - t * 0.8
+    
+    def deviation_to_interval(deviation, min_dev, max_dev):
         """Maps deviation to beep interval in seconds. Outside range = no beep."""
         if deviation < min_dev:
-            return None  # in zone, silent
-        # clamp to max_dev, then map to interval range
+            return None
         dev_clamped = min(deviation, max_dev)
-        # linear map: 15N -> 1.0s interval, 30N -> 0.2s interval
-        t = (dev_clamped - min_dev) / (max_dev - min_dev)  # 0.0 to 1.0
+        t = (dev_clamped - min_dev) / (max_dev - min_dev)
         return 1.0 - t * 0.8
     # Run 'Begin Experiment' code from setup_random
+    # =============================================================================
+    # PRACTICE REWARD PLAN
+    # =============================================================================
+    
+    # Nur die Reward-Übung präsentiert Rewards.
+    # Jeder Eintrag ist (physischer Reward, kognitiver Reward).
+    PRACTICE_REWARDS = {
+        "practice_reward": [
+            (1, 5),
+            (4, 8),
+            (18, 0),
+            (10, 2),
+        ],
+    }
+    
     # =============================================================================
     # PALETTE GENERATION
     # =============================================================================
     def generate_trial_palettes(target_color_rgb255, cognitive_demand_level,
-                                 n_palettes, n_targets = NUM_TARGETS,
-                                 n_holes = NUM_DISTRACTORS, non_target_palettes = NON_TARGET_PALETTES):
+                                 n_palettes, n_targets=NUM_TARGETS,
+                                 n_holes=NUM_DISTRACTORS,
+                                 non_target_palettes=NON_TARGET_PALETTES):
         """
         Generate all palettes for one trial.
         - n_targets palettes contain the target color at a random hole position
@@ -716,100 +815,333 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if available < n_targets:
             raise ValueError(
                 f"n_palettes={n_palettes} is too small to place {n_targets} target(s): "
-                f"only {available} eligible position(s) available (need at least {n_targets + non_target_palettes})."
+                f"only {available} eligible position(s) available."
             )
-        
-        # Never show target in the first or last two palettes
-        target_palette_indices = set(random.sample(range(non_target_palettes[0], n_palettes - non_target_palettes[1]), n_targets))
+    
+        # Never show target in the first or last two palettes.
+        target_palette_indices = set(
+            random.sample(
+                range(non_target_palettes[0], n_palettes - non_target_palettes[1]),
+                n_targets
+            )
+        )
     
         palettes = []
         for i in range(n_palettes):
             if i in target_palette_indices:
-                distractors = generate_distractors(target_color_rgb255, cognitive_demand_level, n=n_holes - 1)
-                target_pos  = random.randint(0, n_holes - 1)
-                palette     = distractors.copy()
+                distractors = generate_distractors(
+                    target_color_rgb255, cognitive_demand_level, n=n_holes - 1
+                )
+                target_pos = random.randint(0, n_holes - 1)
+                palette = distractors.copy()
                 palette.insert(target_pos, target_color_rgb255)
             else:
-                palette = generate_distractors(target_color_rgb255, cognitive_demand_level, n=n_holes)
+                palette = generate_distractors(
+                    target_color_rgb255, cognitive_demand_level, n=n_holes
+                )
             palettes.append(palette)
     
         return palettes
     
+    
     # =============================================================================
     # CREATE TRIALS
     # =============================================================================
-    def make_trial(physical_demand_level, cognitive_demand_level, target_color_rgb255, phase, num_palettes):
+    def make_trial(
+        physical_demand_level,
+        cognitive_demand_level,
+        physical_reward_level,
+        cognitive_reward_level,
+        target_color_rgb255,
+        reward_color,
+        phase,
+        num_palettes
+    ):
         return {
-            "physical_demand_level":  physical_demand_level,
+            "physical_demand_level": physical_demand_level,
             "cognitive_demand_level": cognitive_demand_level,
-            "target_color_rgb255":    target_color_rgb255,
-            "phase":                  phase,
-            "num_palettes":           num_palettes
+            "physical_reward_level": physical_reward_level,
+            "cognitive_reward_level": cognitive_reward_level,
+            "target_color_rgb255": target_color_rgb255,
+            "reward_color": reward_color,
+            "phase": phase,
+            "num_palettes": num_palettes,
         }
     
-    # Practice 1: Low cognitive and low physical demand
+    
+    # =============================================================================
+    # PRACTICE 1: NEUTRAL
+    # Ein Trial, minimale kognitive und physische Anforderungen, keine Rewards.
+    # =============================================================================
     practice_neutral = [
         make_trial(
-            physical_demand_level  = PHYSICAL_DEMAND_MIN,
-            cognitive_demand_level = COGNITIVE_DEMAND_MIN,
-            target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),
-            phase                  = "practice_neutral",
-            num_palettes           = NUM_PALETTES_EXERCISE
+            physical_demand_level=PHYSICAL_DEMAND_MIN,
+            cognitive_demand_level=COGNITIVE_DEMAND_MIN,
+            target_color_rgb255=TARGET_COLORS_RGB255[0],
+            reward_color=None,
+            phase="practice_neutral",
+            num_palettes=NUM_PALETTES_EXERCISE,
+            physical_reward_level=0,
+            cognitive_reward_level=0,
         )
     ]
     
-    # Practice 2: Increasing cognitive and low physical demand
-    practice_cognitive = [
+    
+    # =============================================================================
+    # PRACTICE 2: RATINGS / COGNITIVE
+    # Ein Trial mit dE = 20; %MVC = 3% keine Rewards.
+    # =============================================================================
+    practice_ratings = [
         make_trial(
-            physical_demand_level  = PHYSICAL_DEMAND_MIN,
-            cognitive_demand_level = demand,
-            target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),
-            phase                  = "practice_cognitive",
-            num_palettes           = NUM_PALETTES_EXERCISE
+            physical_demand_level=PHYSICAL_DEMAND_MIN,
+            cognitive_demand_level=COGNITIVE_DEMAND,
+            target_color_rgb255=TARGET_COLORS_RGB255[0],
+            reward_color=None,
+            phase="practice_ratings",
+            num_palettes=NUM_PALETTES_EXERCISE,
+            physical_reward_level=0,
+            cognitive_reward_level=0,
         )
-        for demand in COGNITIVE_DEMAND_LEVELS
     ]
     
-    # Practice 3: Low cognitive and increasing physical demand
+    
+    # =============================================================================
+    # PRACTICE 3: PHYSICAL
+    # Vier Trials mit dE = 70 und 30 % MVC; keine Rewards.
+    # =============================================================================
     practice_physical = [
         make_trial(
-            physical_demand_level  = demand,
-            cognitive_demand_level = COGNITIVE_DEMAND_MIN,
-            target_color_rgb255    = random.choice(TARGET_COLORS_RGB255),
-            phase                  = "practice_physical",
-            num_palettes           = NUM_PALETTES_EXERCISE
+            physical_demand_level=PHYSICAL_DEMAND,
+            cognitive_demand_level=COGNITIVE_DEMAND_MIN,
+            target_color_rgb255=TARGET_COLORS_RGB255[0],
+            reward_color=None,
+            phase="practice_physical",
+            num_palettes=NUM_PALETTES_EXERCISE,
+            physical_reward_level=0,
+            cognitive_reward_level=0,
         )
-        for demand in PHYSICAL_DEMAND_LEVELS
+        for _ in range(4)
     ]
     
-    practice_blocks = [practice_neutral, practice_cognitive, practice_physical]
     
-    # Main experiment blocks
-    main_blocks = {b: [] for b in range(NUM_BLOCKS)}
-    for physical_demand_level, cognitive_demand_level in product(PHYSICAL_DEMAND_LEVELS, COGNITIVE_DEMAND_LEVELS):
-        for block, target_color_rgb255 in zip(main_blocks, random.sample(TARGET_COLORS_RGB255, 3)):
-            main_blocks[block].append(
-                make_trial(
-                    physical_demand_level  = physical_demand_level,
-                    cognitive_demand_level = cognitive_demand_level,
-                    target_color_rgb255    = target_color_rgb255,
-                    phase                  = "main",
-                    num_palettes           = NUM_PALETTES_REGULAR
-                )
+    # =============================================================================
+    # PRACTICE 4: REWARD
+    # Vier Trials mit Rewards; Demand bleibt niedrig.
+    # =============================================================================
+    assert len(PRACTICE_REWARDS["practice_reward"]) == 4, (
+        "Die Reward-Übung muss genau vier Reward-Paare enthalten."
+    )
+    
+    practice_reward = [
+        make_trial(
+            physical_demand_level=PHYSICAL_DEMAND,
+            cognitive_demand_level=COGNITIVE_DEMAND,
+            target_color_rgb255=TARGET_COLORS_RGB255[i % len(TARGET_COLORS_RGB255)],
+            reward_color=None,
+            phase="practice_reward",
+            num_palettes=NUM_PALETTES_EXERCISE,
+            physical_reward_level=physical_reward,
+            cognitive_reward_level=cognitive_reward,
+        )
+        for i, (physical_reward, cognitive_reward)
+        in enumerate(PRACTICE_REWARDS["practice_reward"])
+    ]
+    
+    
+    # Reihenfolge wie gewünscht: Neutral -> Ratings -> Physical -> Reward.
+    practice_blocks = [
+        practice_neutral,
+        practice_ratings,
+        practice_physical,
+        practice_reward,
+    ]
+    
+    # =============================================================================
+    # MAIN EXPERIMENT: REWARD SAMPLING PLAN
+    # =============================================================================
+    if speedrun:
+        print("\n### SPEEDRUN MODE ACTIVE ###\n")
+    
+        # Genau drei Main-Blöcke mit jeweils einem Trial
+        main_blocks = {0: [], 1: [], 2: []}
+    
+        # Für jedes Gesamt-Reward-Level einen Trial erstellen
+        for block_id, total_reward in enumerate(SPEEDRUN_TOTALS):
+    
+            # Verhältnis zwischen physischem und kognitivem Reward
+            ratio = random.choice(REWARD_RATIOS)
+    
+            physical_reward = int(round(total_reward * ratio))
+            cognitive_reward = total_reward - physical_reward
+    
+            # Feste Demand-Werte für ALLE Speedrun-Trials
+            trial = make_trial(
+                physical_demand_level=PHYSICAL_DEMAND,
+                cognitive_demand_level=COGNITIVE_DEMAND,
+                physical_reward_level=physical_reward,
+                cognitive_reward_level=cognitive_reward,
+                target_color_rgb255=TARGET_COLORS_RGB255[
+                    block_id % len(TARGET_COLORS_RGB255)
+                ],
+                reward_color=None,
+                phase="main",
+                num_palettes=NUM_PALETTES_REGULAR,
             )
     
-    for block in main_blocks.values():
-        random.shuffle(block)
+            trial.update({
+                "total_reward": total_reward,
+                "reward_ratio": ratio,
+                "ratio_idx": REWARD_RATIOS.index(ratio),
+                "block_id": block_id,
+            })
     
-    # Randomized main blocks, practice blocks always come first
-    main_block_order = list(main_blocks.keys())
-    random.shuffle(main_block_order)
+            main_blocks[block_id].append(trial)
     
-    # Final list of blocks
+        print("Speedrun cognitive demand:", COGNITIVE_DEMAND)
+        print("Speedrun physical demand:", PHYSICAL_DEMAND)
+    
+        # Im Speedrun werden alle drei vorhandenen Trials ausgewählt.
+        skip_sampling = True
+    
+    else:
+        print("\n### REGULAR EXPERIMENT MODE ACTIVE ###\n")
+        skip_sampling = False
+    
+        # Regulärer Versuchsplan: 3 Blöcke x 14 Trials = 42 Main-Trials.
+        main_blocks = {b: [] for b in range(NUM_BLOCKS)}
+    
+        # Für jede Reward-Ratio wird festgelegt, welcher Block bei welchem
+        # Total-Reward-Level ausgelassen wird.
+        omission_patterns = list(itertools.permutations(range(NUM_BLOCKS)))
+        omission_patterns.append(random.choice(omission_patterns))
+        random.shuffle(omission_patterns)
+    
+        for ratio_idx, ratio in enumerate(REWARD_RATIOS):
+            pattern = omission_patterns[ratio_idx]
+    
+            for total_idx, total_reward in enumerate(TOTAL_REWARDS):
+                omitted_block = pattern[total_idx]
+    
+                # Ratio = Anteil des Gesamt-Rewards, der auf physische Anstrengung entfällt.
+                physical_reward = int(round(total_reward * ratio))
+                cognitive_reward = total_reward - physical_reward
+    
+                # Jede Kombination erscheint in zwei Blöcken, einmal pro Zielfarbe.
+                eligible_blocks = [
+                    b for b in range(NUM_BLOCKS)
+                    if b != omitted_block
+                ]
+    
+                colors_for_combo = [
+                    color.copy() for color in TARGET_COLORS_RGB255
+                ]
+                random.shuffle(colors_for_combo)
+    
+                for block_id, target_color in zip(eligible_blocks, colors_for_combo):
+                    trial = make_trial(
+                        physical_demand_level=PHYSICAL_DEMAND,
+                        cognitive_demand_level=COGNITIVE_DEMAND,
+                        physical_reward_level=physical_reward,
+                        cognitive_reward_level=cognitive_reward,
+                        target_color_rgb255=target_color,
+                        reward_color=None,
+                        phase="main",
+                        num_palettes=NUM_PALETTES_REGULAR,
+                    )
+    
+                    trial.update({
+                        "total_reward": total_reward,
+                        "reward_ratio": float(ratio),
+                        "ratio_idx": ratio_idx,
+                        "block_id": block_id,
+                    })
+                    main_blocks[block_id].append(trial)
+    
+        # Reihenfolge der Trials innerhalb jedes Main-Blocks randomisieren.
+        for block_id in main_blocks:
+            random.shuffle(main_blocks[block_id])
+    
+        # Reward-Sampling nur im regulären Modus prüfen.
+        main_df = pd.DataFrame([
+            {
+                **{k: v for k, v in trial.items() if k != "palettes"},
+                "block": block_id,
+                "color": tuple(trial["target_color_rgb255"]),
+            }
+            for block_id, trials in main_blocks.items()
+            for trial in trials
+        ])
+    
+        print("\nREWARD SAMPLING CHECK")
+        print("Main trials insgesamt:", len(main_df))
+        print("Trials pro Block:")
+        print(main_df.groupby("block").size())
+        print("\nTotal reward pro Block:")
+        print(pd.crosstab(main_df["block"], main_df["total_reward"]))
+        print("\nRatio counts pro Block:")
+        print(pd.crosstab(main_df["block"], main_df["ratio_idx"]))
+    
+    # Diese Ausgabe gilt für Speedrun und regulären Modus.
+    print("\nMAIN EXPERIMENT: TRIAL COUNTS")
+    for block_id, trials in main_blocks.items():
+        print(f"Block {block_id + 1}: {len(trials)} trials")
+    
+    # =============================================================================
+    # ASSEMBLE BLOCKS
+    # =============================================================================
+    # Feste Reihenfolge der Main-Blöcke
+    main_block_order = sorted(main_blocks.keys())
+    
     blocks = []
-    blocks.extend(practice_blocks)
-    for b in main_block_order:
-        blocks.append(main_blocks[b])
+    
+    # ---------------------------------------------------------
+    # PRACTICE-BLÖCKE
+    # Im regulären Modus und im Pilot Mode vollständig ausführen.
+    # Nur im Speedrun überspringen.
+    # ---------------------------------------------------------
+    if not speedrun:
+        blocks.extend(practice_blocks)
+    
+    # ---------------------------------------------------------
+    # MAIN-BLÖCKE
+    # Pilot Mode: den vollständigen ersten Main-Block anhängen.
+    # Regulär/Speedrun: alle Main-Blöcke anhängen.
+    # ---------------------------------------------------------
+    if pilot_mode:
+        first_main_block_id = main_block_order[0]
+    
+        # Wichtig: den gesamten Trial-Listeninhalt übernehmen,
+        # nicht einen einzelnen Trial daraus auswählen.
+        blocks.append(main_blocks[first_main_block_id])
+    
+        print("\nPILOT MODE AKTIV")
+        print("Anzahl Practice-Blöcke:", len(practice_blocks))
+        print(
+            "Trials im ersten Main-Block:",
+            len(main_blocks[first_main_block_id])
+        )
+    
+    else:
+        for block_id in main_block_order:
+            blocks.append(main_blocks[block_id])
+    
+    # Kontrolle der zusammengestellten Blöcke
+    print("\nZUSAMMENGESTELLTE EXPERIMENTBLÖCKE")
+    
+    for block_idx, trials in enumerate(blocks):
+        print(
+            f"Globaler Block {block_idx}: "
+            f"{len(trials)} Trials; "
+            f"Phasen: {set(trial['phase'] for trial in trials)}"
+        )
+    
+    print("\nTRIAL DEMAND LEVELS")
+    
+    for block_idx, trials in enumerate(blocks):
+        print(
+            "Block", block_idx,
+            [trial["cognitive_demand_level"] for trial in trials]
+        )
     
     # =============================================================================
     # CREATE PALETTES
@@ -831,26 +1163,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             trial["palette_target_hole"] = [p.index(target) if target in p else None for p in palettes]
     
     # =============================================================================
-    # BALANCE CHECK
-    # =============================================================================
-    all_trials = []
-    for b, trials in enumerate(blocks):
-        for t in trials:
-            all_trials.append({**{k: v for k, v in t.items() if k != "palettes"}, "block": b})
-    df_check = pd.DataFrame(all_trials)
-    df_check["color"] = df_check["target_color_rgb255"].apply(tuple)
-    
-    lines = ["=" * 50, "TRIAL BALANCE CHECK", "=" * 50]
-    for factor in ["physical_demand_level", "cognitive_demand_level", "color"]:
-        lines.append(f"\n--- {factor} ---")
-        table = df_check.groupby(["block", factor]).size().unstack(fill_value=0)
-        lines.append(table.to_string())
-        lines.append(f"Totals: {df_check[factor].value_counts().sort_index().to_dict()}")
-    lines.append("\nTotal trials per block:")
-    lines.append(df_check.groupby("block").size().to_string())
-    print("\n".join(lines))
-    
-    # =============================================================================
     # BUILD LONG FORMAT ROWS
     # =============================================================================
     rows = []
@@ -862,11 +1174,16 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     rows.append({
                         "seed":                   b,
                         "block":                  b,
+                        "phase":                  trial["phase"],
                         "trial_idx":              trial_idx,
                         "mvc_base":               None,
                         "mvc_post":               None,
                         "physical_demand_level":  trial["physical_demand_level"],
                         "cognitive_demand_level": trial["cognitive_demand_level"],
+                        "physical_reward_level":  trial["physical_reward_level"],
+                        "cognitive_reward_level": trial["cognitive_reward_level"],
+                        "reward_ratio":           trial.get("reward_ratio", None),
+                        "reward_total":           trial.get("total_reward", None), 
                         "target_color_rgb255":    trial["target_color_rgb255"],
                         "num_palettes":           trial["num_palettes"],
                         "palette_idx":            palette_idx,
@@ -888,7 +1205,14 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         "d_prime":                  None,
                         "NRMSE":                    None,
                         "sBias":                    None,
-                        "pTWTR":                    None
+                        "pTWTR":                    None,
+                        "rpe_cognitive":            None,
+                        "rpe_physical":             None,
+                        "rpe_svoce":                None,
+                        "rpe_svope":                None,
+                        "rpe_time":                 None,
+                        "rpe_boredom":              None,
+                        "reward_points_max":        None
                     })
     
     # Create an index for fast lookup
@@ -907,43 +1231,177 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         row["seed"] = GLOBAL_SEED
     
     pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_data.csv', index=False)
+    # =============================================================================
+    # SELECT 3 REWARD TRIALS
+    # =============================================================================
+    
+    main_trials_flat = []
+    
+    global_main_trial_idx = 1
+    
+    for block_id, trials in main_blocks.items():
+        for trial_idx, trial in enumerate(trials):
+            main_trials_flat.append({
+                "block_id": block_id,
+                "main_block_id": block_id,
+                "trial_idx": trial_idx,
+                "global_main_trial_idx": global_main_trial_idx,
+                "total_reward": trial["total_reward"],
+                "reward_ratio": trial["reward_ratio"],
+                "phys_reward": trial["physical_reward_level"],
+                "cog_reward": trial["cognitive_reward_level"],
+            })
+    
+            global_main_trial_idx += 1
+    
+    main_df = pd.DataFrame(main_trials_flat)
+    
+    if pilot_mode:
+        # Ein Reward-Trial aus dem ersten Main-Block
+        # für die spätere Punkteberechnung auswählen.
+        candidates = main_df[
+            main_df["block_id"] == main_block_order[0]
+        ]
+    
+        if candidates.empty:
+            raise ValueError(
+                "Pilot Mode: Im ersten Main-Block wurden keine Trials gefunden."
+            )
+    
+        selected_df = candidates.sample(
+            n=1,
+            random_state=GLOBAL_SEED
+        ).copy()
+    
+        print(
+            "\nPILOT MODE: Ein Reward-Trial für die "
+            "Punkteberechnung ausgewählt."
+        )
+    
+    elif speedrun:
+        # Alle drei Speedrun-Trials für die Punkteberechnung
+        selected_df = main_df.copy()
+    
+    else:
+        # Regulär: zufälliges Gesamt-Reward-Level pro Main-Block.
+        random_totals = random.sample(
+            TOTAL_REWARDS,
+            k=len(TOTAL_REWARDS)
+        )
+    
+        selected_trials = []
+    
+        for block_id, assigned_total in zip(
+            sorted(main_blocks.keys()), random_totals
+        ):
+            candidates = main_df[
+                (main_df["block_id"] == block_id) &
+                (main_df["total_reward"] == assigned_total)
+            ]
+    
+            if candidates.empty:
+                raise ValueError(
+                    f"Kein Trial gefunden für Block {block_id} "
+                    f"mit total_reward {assigned_total}."
+                )
+    
+            selected = candidates.sample(
+                n=1,
+                random_state=GLOBAL_SEED
+            ).iloc[0]
+    
+            selected_trials.append(selected)
+    
+        selected_df = pd.DataFrame(selected_trials)
+    
+    # =============================================================================
+    # GLOBALE BLOCKNUMMER UND CSV-SPEICHERUNG
+    # =============================================================================
+    # Interne Main-Block-ID sichern
+    if "main_block_id" not in selected_df.columns:
+        selected_df["main_block_id"] = selected_df["block_id"].astype(int)
+    
+    # Globale Blocknummer: vier Practice-Blöcke davor,
+    # außer im Speedrun, der keine Practice-Blöcke ausführt.
+    practice_offset = 0 if speedrun else len(practice_blocks)
+    
+    block_mapping = {
+        block_id: practice_offset + main_block_order.index(block_id)
+        for block_id in main_blocks
+    }
+    
+    selected_df["block"] = (
+        selected_df["main_block_id"].map(block_mapping).astype(int)
+    )
+    
+    # Die gespeicherte block_id soll der globalen Blocknummer entsprechen.
+    selected_df["block_id"] = selected_df["block"]
+    
+    print("\n### SELECTED REWARD TRIALS ###")
+    print(selected_df[
+        [
+            "block_id",
+            "block",
+            "main_block_id",
+            "global_main_trial_idx",
+            "trial_idx",
+            "total_reward",
+        ]
+    ])
+    
+    selected_df.to_csv(
+        thisExp.dataFileName + "_selected_reward_trials.csv",
+        index=False
+    )
     
     # Define some labels for later display
     phase_labels = {
         'practice_neutral':  'Practice - Neutral',
+        'practice_reward':   'Practice - Reward',
         'practice_physical': 'Practice - Physical',
-        'practice_cognitive':'Practice - Cognitive',
+        'practice_ratings':  'Practice - Ratings',
         'main':              'Main',
     }
-    # Run 'Begin Experiment' code from setup_ring
-    # Main ring parameters
-    ring_radius = 0.075  # distance of small circles from center
-    hole_radius = 0.02   # size of each small circle
     
-    # Create the 8 hole stimuli
-    hole_stimuli = []
+    # MAXIMUM REWARD POINTS ----
+    
+    reward_points_max = sum(
+        trial["physical_reward_level"] + trial["cognitive_reward_level"]
+        for trials in main_blocks.values()
+        for trial in trials
+    )
+    # Run 'Begin Experiment' code from setup_ring
+    # PARAMETERS
+    NUM_HOLES_INNER = 8
+    NUM_HOLES_OUTER = 12
+    NUM_HOLES = NUM_HOLES_INNER + NUM_HOLES_OUTER   # = 20
+    
+    INNER_RADIUS = 0.075
+    OUTER_RADIUS = 0.135
+    HOLE_RADIUS = 0.02
+    
     ring_center = (0.5, 0.0)
-    for i in range(NUM_DISTRACTORS):
-        angle = np.pi - 2 * np.pi * i / NUM_DISTRACTORS
-        x = ring_center[0] + ring_radius * np.cos(angle)
-        y = ring_center[1] + ring_radius * np.sin(angle)
+    
+    hole_stimuli = []
+    hole_labels = []
+    
+    # --- INNER RING (8 holes) ---
+    for i in range(NUM_HOLES_INNER):
+        angle = np.pi - 2 * np.pi * i / NUM_HOLES_INNER
+        x = ring_center[0] + INNER_RADIUS * np.cos(angle)
+        y = ring_center[1] + INNER_RADIUS * np.sin(angle)
+    
         circle = visual.Circle(
             win,
-            radius=hole_radius,
+            radius=HOLE_RADIUS,
             pos=(x, y),
-            fillColor=[128, 128, 128],
+            fillColor=[128,128,128],
             colorSpace='rgb255',
             lineColor=None,
             autoLog=False
         )
         hole_stimuli.append(circle)
     
-    # Create the labels
-    hole_labels = []
-    for i in range(NUM_DISTRACTORS):
-        angle = np.pi - 2 * np.pi * i / NUM_DISTRACTORS
-        x = ring_center[0] + ring_radius * np.cos(angle)
-        y = ring_center[1] + ring_radius * np.sin(angle)
         label = visual.TextStim(
             win,
             text=str(i),
@@ -954,6 +1412,35 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             autoLog=False
         )
         hole_labels.append(label)
+    
+    # --- OUTER RING (12 holes) ---
+    for i in range(NUM_HOLES_OUTER):
+        angle = np.pi - 2 * np.pi * i / NUM_HOLES_OUTER
+        x = ring_center[0] + OUTER_RADIUS * np.cos(angle)
+        y = ring_center[1] + OUTER_RADIUS * np.sin(angle)
+    
+        circle = visual.Circle(
+            win,
+            radius=HOLE_RADIUS,
+            pos=(x, y),
+            fillColor=[128,128,128],
+            colorSpace='rgb255',
+            lineColor=None,
+            autoLog=False
+        )
+        hole_stimuli.append(circle)
+    
+        label = visual.TextStim(
+            win,
+            text=str(NUM_HOLES_INNER + i),
+            pos=(x, y),
+            height=0.02,
+            color='white',
+            bold=True,
+            autoLog=False
+        )
+        hole_labels.append(label)
+    
     
     # --- Initialize components for Routine "rr_block" ---
     
@@ -1094,6 +1581,17 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         languageStyle='LTR',
         depth=-2.0);
     
+    # --- Initialize components for Routine "rr_reward" ---
+    
+    reward_lights = Apparatus(None)
+    reward_display = visual.TextStim(win=win, name='reward_display',
+        text='',
+        font='Courier New',
+        pos=(0, 0), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-2.0);
+    
     # --- Initialize components for Routine "rr_target" ---
     
     target_lights = Apparatus(None)
@@ -1128,41 +1626,97 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     rating_dprime_text = visual.TextStim(win=win, name='rating_dprime_text',
         text='',
         font='Courier New',
-        pos=(-0.2, 0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
+        pos=(-0.4, 0.2), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
         color='white', colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
         depth=-1.0);
-    rating_physical_text = visual.TextStim(win=win, name='rating_physical_text',
-        text='Körperliche Anstrengung',
-        font='Courier New',
-        pos=(0.4, -0.1), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
-        color='white', colorSpace='rgb', opacity=None, 
-        languageStyle='LTR',
-        depth=-2.0);
-    rating_physical = visual.Slider(win=win, name='rating_physical',
-        startValue=None, size=(0.5, 0.075), pos=(0.4, -0.2), units=win.units,
-        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
-        style='rating', styleTweaks=['triangleMarker'], opacity=None,
-        labelColor='LightGray', markerColor='Red', lineColor='White', colorSpace='rgb',
-        font='Noto Sans', labelHeight=0.025,
-        flip=False, ori=0.0, depth=-3, readOnly=False)
     rating_cognitive_text = visual.TextStim(win=win, name='rating_cognitive_text',
         text='Kognitive Anstrengung',
         font='Courier New',
-        pos=(0.4, 0.3), draggable=False, height=0.035, wrapWidth=None, ori=0.0, 
-        color='white', colorSpace='rgb', opacity=None, 
+        pos=(0.3, 0.45), draggable=False, height=0.025, wrapWidth=None, ori=0.0, 
+        color=(-1.0000, -0.2157, -1.0000), colorSpace='rgb', opacity=None, 
         languageStyle='LTR',
-        depth=-4.0);
+        depth=-2.0);
     rating_cognitive = visual.Slider(win=win, name='rating_cognitive',
-        startValue=None, size=(0.5, 0.075), pos=(0.4, 0.2), units=win.units,
+        startValue=None, size=(0.75, 0.075), pos=(0.3, 0.4), units=win.units,
         labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
         style='rating', styleTweaks=['triangleMarker'], opacity=None,
-        labelColor='LightGray', markerColor='Red', lineColor='White', colorSpace='rgb',
+        labelColor=(-1.0000, -0.2157, -1.0000), markerColor=(-1.0000, -0.2157, -1.0000), lineColor=(-1.0000, -0.2157, -1.0000), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-3, readOnly=False)
+    rating_physical_text = visual.TextStim(win=win, name='rating_physical_text',
+        text='Körperliche Anstrengung',
+        font='Courier New',
+        pos=(0.3, 0.3), draggable=False, height=0.025, wrapWidth=None, ori=0.0, 
+        color=(0.0902, -1.0000, -1.0000), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-4.0);
+    rating_physical = visual.Slider(win=win, name='rating_physical',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, 0.25), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(0.0902, -1.0000, -1.0000), markerColor=(0.0902, -1.0000, -1.0000), lineColor=(0.0902, -1.0000, -1.0000), colorSpace='rgb',
         font='Noto Sans', labelHeight=0.025,
         flip=False, ori=0.0, depth=-5, readOnly=False)
+    rating_svoce_text = visual.TextStim(win=win, name='rating_svoce_text',
+        text='Wert kognitive Anstrengung',
+        font='Courier New',
+        pos=(0.3, 0.15), draggable=False, height=0.025, wrapWidth=None, ori=0.0, 
+        color=(1.0000, 0.7882, 0.5373), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-6.0);
+    rating_svoce = visual.Slider(win=win, name='rating_svoce',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, 0.1), units=win.units,
+        labels=(-5,-4,-3,-2,-1,0,1,2,3,4,5), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(1.0000, 0.7882, 0.5373), markerColor=(1.0000, 0.7882, 0.5373), lineColor=(1.0000, 0.7882, 0.5373), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-7, readOnly=False)
+    rating_svope_text = visual.TextStim(win=win, name='rating_svope_text',
+        text='Wert körperliche Anstrengung',
+        font='Courier New',
+        pos=(0.3, 0.00), draggable=False, height=0.025, wrapWidth=None, ori=0.0, 
+        color=(0.4824, 0.4353, -0.1608), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-8.0);
+    rating_svope = visual.Slider(win=win, name='rating_svope',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, -0.05), units=win.units,
+        labels=(-5,-4,-3,-2,-1,0,1,2,3,4,5), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(0.4824, 0.4353, -0.1608), markerColor=(0.4824, 0.4353, -0.1608), lineColor=(0.4824, 0.4353, -0.1608), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-9, readOnly=False)
+    rating_boredom_text = visual.TextStim(win=win, name='rating_boredom_text',
+        text='Langeweile',
+        font='Courier New',
+        pos=(0.3, -0.15), draggable=False, height=0.025, wrapWidth=None, ori=0.0, 
+        color=(0.1608, -1.0000, 0.6549), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-10.0);
+    rating_boredom = visual.Slider(win=win, name='rating_boredom',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, -0.2), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(0.1608, -1.0000, 0.6549), markerColor=(0.1608, -1.0000, 0.6549), lineColor=(0.1608, -1.0000, 0.6549), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-11, readOnly=False)
+    rating_time_text = visual.TextStim(win=win, name='rating_time_text',
+        text='Zeitwahrnehmung',
+        font='Courier New',
+        pos=(0.3, -0.3), draggable=False, height=0.025, wrapWidth=None, ori=0.0, 
+        color=(1.0000, 0.0980, -1.0000), colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-12.0);
+    rating_time = visual.Slider(win=win, name='rating_time',
+        startValue=None, size=(0.75, 0.075), pos=(0.3, -0.35), units=win.units,
+        labels=(0,1,2,3,4,5,6,7,8,9,10), ticks=(0,1,2,3,4,5,6,7,8,9,10), granularity=1.0,
+        style='rating', styleTweaks=['triangleMarker'], opacity=None,
+        labelColor=(1.0000, 0.0980, -1.0000), markerColor=(1.0000, 0.0980, -1.0000), lineColor=(1.0000, 0.0980, -1.0000), colorSpace='rgb',
+        font='Noto Sans', labelHeight=0.025,
+        flip=False, ori=0.0, depth=-13, readOnly=False)
     rating_continue_button = visual.ButtonStim(win, 
         text='WEITER', font='Courier New',
-        pos=(-0.2, -0.2),
+        pos=(-0.4, -0.2),
         letterHeight=0.035,
         size=(0.25, 0.1), 
         ori=0.0
@@ -1174,9 +1728,18 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         padding=None,
         anchor='center',
         name='rating_continue_button',
-        depth=-6
+        depth=-14
     )
     rating_continue_button.buttonClock = core.Clock()
+    
+    # --- Initialize components for Routine "rr_points" ---
+    points_display_text = visual.TextStim(win=win, name='points_display_text',
+        text='',
+        font='Arial',
+        pos=(0, 0), draggable=False, height=0.05, wrapWidth=None, ori=0.0, 
+        color='white', colorSpace='rgb', opacity=None, 
+        languageStyle='LTR',
+        depth=-1.0);
     
     # --- Initialize components for Routine "rr_finish" ---
     finish_display = visual.TextStim(win=win, name='finish_display',
@@ -1953,7 +2516,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             thisExp.addData('maxforce_lights.started', t)
                             # update status
                             maxforce_lights.status = STARTED
-                            maxforce_lights.setLights("all", 'white')
+                            maxforce_lights.setLights("all", 'grey')
                         
                         # if maxforce_lights is active this frame...
                         if maxforce_lights.status == STARTED:
@@ -2365,15 +2928,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if thisSession is not None:
                     # if running in a Session with a Liaison client, send data up to now
                     thisSession.sendExperimentData()
-                # get names of stimulus parameters
-                if oo_mvc_rep.trialList in ([], [None], None):
-                    params = []
-                else:
-                    params = oo_mvc_rep.trialList[0].keys()
-                # save data for this loop
-                oo_mvc_rep.saveAsExcel(filename + '.xlsx', sheetName='oo_mvc_rep',
-                    stimOut=params,
-                    dataOut=['n','all_mean','all_std', 'all_raw'])
                 # mark thisOo_mvc_type as finished
                 if hasattr(thisOo_mvc_type, 'status'):
                     thisOo_mvc_type.status = FINISHED
@@ -2395,15 +2949,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             if thisSession is not None:
                 # if running in a Session with a Liaison client, send data up to now
                 thisSession.sendExperimentData()
-            # get names of stimulus parameters
-            if oo_mvc_type.trialList in ([], [None], None):
-                params = []
-            else:
-                params = oo_mvc_type.trialList[0].keys()
-            # save data for this loop
-            oo_mvc_type.saveAsExcel(filename + '.xlsx', sheetName='oo_mvc_type',
-                stimOut=params,
-                dataOut=['n','all_mean','all_std', 'all_raw'])
             # mark thisYn_mvc as finished
             if hasattr(thisYn_mvc, 'status'):
                 thisYn_mvc.status = FINISHED
@@ -2425,15 +2970,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if thisSession is not None:
             # if running in a Session with a Liaison client, send data up to now
             thisSession.sendExperimentData()
-        # get names of stimulus parameters
-        if yn_mvc.trialList in ([], [None], None):
-            params = []
-        else:
-            params = yn_mvc.trialList[0].keys()
-        # save data for this loop
-        yn_mvc.saveAsExcel(filename + '.xlsx', sheetName='yn_mvc',
-            stimOut=params,
-            dataOut=['n','all_mean','all_std', 'all_raw'])
         
         # set up handler to look after randomisation of conditions etc
         yn_block = data.TrialHandler2(
@@ -2483,6 +3019,10 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             # Define button for block start
             cur_phase = blocks[oo_block.thisN][0].get('phase', 'main')
             start_block_button_text = f"{phase_labels.get(cur_phase, cur_phase)}"
+            
+            
+            # for debugging
+            #mvc = 200
             
             start_block_text.setText(start_block_button_text)
             # reset start_block_button to account for continued clicks & clear times on/off
@@ -2845,6 +3385,244 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     for paramName in thisOo_level:
                         globals()[paramName] = thisOo_level[paramName]
                 
+                # --- Prepare to start Routine "rr_reward" ---
+                # create an object to store info about Routine rr_reward
+                rr_reward = data.Routine(
+                    name='rr_reward',
+                    components=[reward_lights, reward_display],
+                )
+                rr_reward.status = NOT_STARTED
+                continueRoutine = True
+                # update component parameters for each repeat
+                # Run 'Begin Routine' code from reward_code
+                # ===== CONDITION SETUP =====
+                
+                # Get data for current block and trial
+                cur_block_trials = blocks[oo_block.thisN]
+                cur_trial = cur_block_trials[oo_level.thisN]
+                cur_total_blocks = len(blocks)
+                cur_trials_in_block = len(cur_block_trials)
+                
+                cur_num_palettes = cur_trial['num_palettes']
+                cur_physical_demand_level = cur_trial['physical_demand_level']
+                cur_cognitive_demand_level = cur_trial['cognitive_demand_level']
+                cur_target_color_rgb255 = cur_trial['target_color_rgb255']
+                cur_phase = cur_trial.get('phase', 'main')
+                
+                # ===== REWARD ROUTINE SETUP =====
+                
+                # Hole aktuellen Trial
+                #cur_block_trials = blocks[oo_block.thisN]
+                cur_trial = blocks[oo_block.thisN][oo_level.thisN]
+                cur_physical_reward_level = cur_trial['physical_reward_level']
+                cur_cognitive_reward_level = cur_trial['cognitive_reward_level']
+                cur_phase = cur_trial.get('phase', 'main')
+                
+                # Reward Level Apparatus LEDs
+                # ordered selection
+                selected_cognitive = cognitive_indices[:cur_cognitive_reward_level]
+                selected_physical  = physical_indices[:cur_physical_reward_level]
+                
+                # Finales Reward-Feld (20 Löcher)
+                reward_color = []
+                
+                for i in range(20):
+                    if i in selected_cognitive:
+                        reward_color.append(REWARD_COLOR_COGNITIVE)
+                    elif i in selected_physical:
+                        reward_color.append(REWARD_COLOR_PHYSICAL)
+                    else:
+                        reward_color.append(REWARD_COLOR_NON)
+                
+                # Final: 21 Farben including black reference hole for color assignment to "all"
+                reward_color = reward_color + reference_hole
+                
+                # Display
+                reward_display.alignText = "left"
+                reward_display.bold = True
+                
+                # color display circles
+                for i, circle in enumerate(hole_stimuli):
+                    circle.fillColor = reward_color[i]
+                
+                
+                reward_lights_led_off_sent = False
+                # store start times for rr_reward
+                rr_reward.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+                rr_reward.tStart = globalClock.getTime(format='float')
+                rr_reward.status = STARTED
+                thisExp.addData('rr_reward.started', rr_reward.tStart)
+                rr_reward.maxDuration = None
+                # keep track of which components have finished
+                rr_rewardComponents = rr_reward.components
+                for thisComponent in rr_reward.components:
+                    thisComponent.tStart = None
+                    thisComponent.tStop = None
+                    thisComponent.tStartRefresh = None
+                    thisComponent.tStopRefresh = None
+                    if hasattr(thisComponent, 'status'):
+                        thisComponent.status = NOT_STARTED
+                # reset timers
+                t = 0
+                _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+                frameN = -1
+                
+                # --- Run Routine "rr_reward" ---
+                thisExp.currentRoutine = rr_reward
+                rr_reward.forceEnded = routineForceEnded = not continueRoutine
+                while continueRoutine and routineTimer.getTime() < 3.5:
+                    # if trial has changed, end Routine now
+                    if hasattr(thisOo_level, 'status') and thisOo_level.status == STOPPING:
+                        continueRoutine = False
+                    # get current time
+                    t = routineTimer.getTime()
+                    tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+                    tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+                    frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+                    # update/draw components on each frame
+                    # Run 'Each Frame' code from reward_code
+                    reward_display_text = (
+                        f"============ TRIAL INFO ================\n"
+                        f"PHASE: {phase_labels.get(cur_phase, cur_phase)}\n"
+                        f"BLOCK {oo_block.thisN+1:2}/{cur_total_blocks} | TRIAL {oo_level.thisN+1:2}/{cur_trials_in_block}\n"
+                        f"----------------------------------------\n"
+                        f"Physical reward:   {cur_physical_reward_level:.0f} points\n"
+                        f"Cognitive reward:  {cur_cognitive_reward_level:.0f} points\n"
+                        f"========================================\n"
+                    )
+                    
+                    # Display monitoring circle
+                    for circle, label in zip(hole_stimuli, hole_labels):
+                        circle.draw()
+                        label.draw()
+                    
+                    
+                    # if reward_lights is starting this frame...
+                    if reward_lights.status == NOT_STARTED and t >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        reward_lights.frameNStart = frameN  # exact frame index
+                        reward_lights.tStart = t  # local t and not account for scr refresh
+                        reward_lights.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(reward_lights, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.addData('reward_lights.started', t)
+                        # update status
+                        reward_lights.status = STARTED
+                        reward_lights.setLights("all", reward_color)
+                    
+                    # if reward_lights is active this frame...
+                    if reward_lights.status == STARTED:
+                        # update params
+                        pass
+                        
+                    
+                    # if reward_lights is stopping this frame...
+                    if reward_lights.status == STARTED:
+                        # is it time to stop? (based on global clock, using actual start)
+                        if tThisFlipGlobal > reward_lights.tStartRefresh + 3.5-frameTolerance:
+                            # keep track of stop time/frame for later
+                            reward_lights.tStop = t  # not accounting for scr refresh
+                            reward_lights.tStopRefresh = tThisFlipGlobal  # on global time
+                            reward_lights.frameNStop = frameN  # exact frame index
+                            # add timestamp to datafile
+                            thisExp.addData('reward_lights.stopped', t)
+                            # update status
+                            reward_lights.status = FINISHED
+                            if True:
+                               reward_lights.turnOffLights("all")
+                               reward_lights_led_off_sent = True
+                    
+                    # *reward_display* updates
+                    
+                    # if reward_display is starting this frame...
+                    if reward_display.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        reward_display.frameNStart = frameN  # exact frame index
+                        reward_display.tStart = t  # local t and not account for scr refresh
+                        reward_display.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(reward_display, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'reward_display.started')
+                        # update status
+                        reward_display.status = STARTED
+                        reward_display.setAutoDraw(True)
+                    
+                    # if reward_display is active this frame...
+                    if reward_display.status == STARTED:
+                        # update params
+                        reward_display.setText(reward_display_text, log=False)
+                    
+                    # if reward_display is stopping this frame...
+                    if reward_display.status == STARTED:
+                        # is it time to stop? (based on global clock, using actual start)
+                        if tThisFlipGlobal > reward_display.tStartRefresh + 3.5-frameTolerance:
+                            # keep track of stop time/frame for later
+                            reward_display.tStop = t  # not accounting for scr refresh
+                            reward_display.tStopRefresh = tThisFlipGlobal  # on global time
+                            reward_display.frameNStop = frameN  # exact frame index
+                            # add timestamp to datafile
+                            thisExp.timestampOnFlip(win, 'reward_display.stopped')
+                            # update status
+                            reward_display.status = FINISHED
+                            reward_display.setAutoDraw(False)
+                    
+                    # check for quit (typically the Esc key)
+                    if defaultKeyboard.getKeys(keyList=["escape"]):
+                        thisExp.status = FINISHED
+                    if thisExp.status == FINISHED or endExpNow:
+                        endExperiment(thisExp, win=win)
+                        return
+                    # pause experiment here if requested
+                    if thisExp.status == PAUSED:
+                        pauseExperiment(
+                            thisExp=thisExp, 
+                            win=win, 
+                            timers=[routineTimer, globalClock], 
+                            currentRoutine=rr_reward,
+                        )
+                        # skip the frame we paused on
+                        continue
+                    
+                    # has a Component requested the Routine to end?
+                    if not continueRoutine:
+                        rr_reward.forceEnded = routineForceEnded = True
+                    # has the Routine been forcibly ended?
+                    if rr_reward.forceEnded or routineForceEnded:
+                        break
+                    # has every Component finished?
+                    continueRoutine = False
+                    for thisComponent in rr_reward.components:
+                        if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                            continueRoutine = True
+                            break  # at least one component has not yet finished
+                    
+                    # refresh the screen
+                    if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+                        win.flip()
+                
+                # --- Ending Routine "rr_reward" ---
+                for thisComponent in rr_reward.components:
+                    if hasattr(thisComponent, "setAutoDraw"):
+                        thisComponent.setAutoDraw(False)
+                # store stop times for rr_reward
+                rr_reward.tStop = globalClock.getTime(format='float')
+                rr_reward.tStopRefresh = tThisFlipGlobal
+                thisExp.addData('rr_reward.stopped', rr_reward.tStop)
+                # Run 'End Routine' code from reward_code
+                # Reset reward lights
+                #for hole in reward_lights:
+                #    reward_lights[hole].fillColor = [0,0,0]
+                
+                if True and not reward_lights_led_off_sent:
+                    reward_lights.turnOffLights("all")
+                # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
+                if rr_reward.maxDurationReached:
+                    routineTimer.addTime(-rr_reward.maxDuration)
+                elif rr_reward.forceEnded:
+                    routineTimer.reset()
+                else:
+                    routineTimer.addTime(-3.500000)
+                
                 # --- Prepare to start Routine "rr_target" ---
                 # create an object to store info about Routine rr_target
                 rr_target = data.Routine(
@@ -2882,9 +3660,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 _last_beep_t = 0
                 
                 force_nrmse_buffer = []
-                target_pmvc    = cur_physical_demand_level * mvc
-                lower_threshold = max(target_pmvc - TOLERANCE, 0)
-                upper_threshold = target_pmvc + TOLERANCE
+                target_pmvc = cur_physical_demand_level * mvc
+                lower_threshold = max(target_pmvc - FORCE_TOLERANCE_N, 0)
+                upper_threshold = target_pmvc + FORCE_TOLERANCE_N
                 
                 toneState    = 0
                 _lastSwitchT = -1e9
@@ -2903,6 +3681,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # ===== INITIALIZE FORCE METRICS =====
                 FORCE_TOLERANCE_BUFFER.clear()
                 force_nrmse_buffer = []
+                #ptwtr_values = []
+                
                 target_lights_led_off_sent = False
                 # store start times for rr_target
                 rr_target.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
@@ -2927,7 +3707,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 # --- Run Routine "rr_target" ---
                 thisExp.currentRoutine = rr_target
                 rr_target.forceEnded = routineForceEnded = not continueRoutine
-                while continueRoutine and routineTimer.getTime() < 3.0:
+                while continueRoutine and routineTimer.getTime() < 3.5:
                     # if trial has changed, end Routine now
                     if hasattr(thisOo_level, 'status') and thisOo_level.status == STOPPING:
                         continueRoutine = False
@@ -2952,6 +3732,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         force_nrmse_buffer.append(smooth_force)
                         nrmse = force_nrmse(force_nrmse_buffer, target_pmvc)
                         sbias = force_bias(force_nrmse_buffer, target_pmvc)
+                        # ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                         ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                         
                         if len(FORCE_TOLERANCE_BUFFER) >= FORCE_BUFFER_LENGTH:
@@ -2980,6 +3761,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     else:
                         mute_audio()
                         print("Force is None!")
+                        
+                    # save current ptwtr value
+                    #ptwtr_values.append(ptwtr)
                     
                     # Create the target display text
                     if smooth_force > upper_threshold:
@@ -2997,6 +3781,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         f"Target Color:      {cur_target_color_name}\n"
                         f"Physical demand:   {cur_physical_demand_level*100:.0f}% MVC\n"
                         f"Cognitive demand:  {cur_cognitive_demand_level:.0f} dE\n"
+                        f"Physical reward:   {cur_physical_reward_level:.0f} points\n"
+                        f"Cognitive reward:  {cur_cognitive_reward_level:.0f} points\n"
                         f"----------------------------------------\n"
                         f"MVC:               {mvc:03.0f} N\n"
                         f"Target:            {lower_threshold:03.0f} N | {target_pmvc:03.0f} N | {upper_threshold:03.0f} N\n"
@@ -3104,7 +3890,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # if target_display is stopping this frame...
                     if target_display.status == STARTED:
                         # is it time to stop? (based on global clock, using actual start)
-                        if tThisFlipGlobal > target_display.tStartRefresh + 3.0-frameTolerance:
+                        if tThisFlipGlobal > target_display.tStartRefresh + 3.5-frameTolerance:
                             # keep track of stop time/frame for later
                             target_display.tStop = t  # not accounting for scr refresh
                             target_display.tStopRefresh = tThisFlipGlobal  # on global time
@@ -3159,6 +3945,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 thisExp.addData('rr_target.stopped', rr_target.tStop)
                 # Run 'End Routine' code from target_code
                 force_nrmse_buffer = []
+                #if len(ptwtr_values) > 0:
+                #    ptwtr_mean = sum(ptwtr_values) / len(ptwtr_values)
+                #else:
+                 #   ptwtr_mean = 0
+                
+                #ptwtr_values = []
                 if True and not target_lights_led_off_sent:
                     target_lights.turnOffLights("inner")
                 oo_level.addData('target_force.rate', 50)
@@ -3195,7 +3987,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 elif rr_target.forceEnded:
                     routineTimer.reset()
                 else:
-                    routineTimer.addTime(-3.000000)
+                    routineTimer.addTime(-3.500000)
                 
                 # set up handler to look after randomisation of conditions etc
                 oo_palette = data.TrialHandler2(
@@ -3242,6 +4034,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     continueRoutine = True
                     # update component parameters for each repeat
                     # Run 'Begin Routine' code from trial_color_code
+                    # ==== REWARD COUNTER set zero =====
+                    if cur_phase == "main" and oo_level.thisN == 0:
+                        total_physical_points  = 0
+                        total_cognitive_points = 0
+                    
                     # ===== CONDITION SETUP =====
                     cur_trial = blocks[oo_block.thisN][oo_level.thisN]
                     
@@ -3256,9 +4053,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # =============================================================================
                     # AUDIO - BEGIN ROUTINE
                     # =============================================================================
-                    target_pmvc    = cur_physical_demand_level * mvc
-                    lower_threshold = max(target_pmvc - TOLERANCE, 0)
-                    upper_threshold = target_pmvc + TOLERANCE
+                    target_pmvc = cur_physical_demand_level * mvc
+                    lower_threshold = max(target_pmvc - FORCE_TOLERANCE_N, 0)
+                    upper_threshold = target_pmvc + FORCE_TOLERANCE_N
                     
                     toneState    = 0
                     _lastSwitchT = -1e9
@@ -3268,9 +4065,12 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     trial_display.alignText = "left"
                     trial_display.bold = True
                     
+                    # extend Palette to 20 colors
+                    extended_palette = cur_palette + [[0,0,0]] * (len(hole_stimuli) - len(cur_palette))
+                    
                     # Color the display circle
                     for i, circle in enumerate(hole_stimuli):
-                        circle.fillColor = cur_palette[i]
+                        circle.fillColor = extended_palette[i]
                     trial_lights_led_off_sent = False
                     # store start times for rr_trial
                     rr_trial.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
@@ -3320,6 +4120,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             force_nrmse_buffer.append(smooth_force)
                             nrmse = force_nrmse(force_nrmse_buffer, target_pmvc)
                             sbias = force_bias(force_nrmse_buffer, target_pmvc)
+                            # ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                             ptwtr = force_pct_in_range(force_nrmse_buffer, target_pmvc)
                             
                             if len(FORCE_TOLERANCE_BUFFER) >= FORCE_BUFFER_LENGTH:
@@ -3362,6 +4163,8 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             f"Target Color:      {cur_target_color_name}\n"
                             f"Physical demand:   {cur_physical_demand_level*100:.0f}% MVC\n"
                             f"Cognitive demand:  {cur_cognitive_demand_level:.0f} dE\n"
+                            f"Physical reward:   {cur_physical_reward_level:.0f} points\n"
+                            f"Cognitive reward:  {cur_cognitive_reward_level:.0f} points\n"
                             f"----------------------------------------\n"
                             f"MVC:               {mvc:03.0f} N\n"
                             f"Target:            {lower_threshold:03.0f} N | {target_pmvc:03.0f} N | {upper_threshold:03.0f} N\n"
@@ -3476,7 +4279,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                             thisExp.addData('trial_force.started', t)
                             # update status
                             trial_force.status = STARTED
-                            trial_force.startForceMeasurement(50, 'both')
+                            trial_force.startForceMeasurement(50, 'white')
                         
                         # if trial_force is active this frame...
                         if trial_force.status == STARTED:
@@ -3606,6 +4409,9 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         rows[i]["is_false_alarm"]       = is_false_alarm
                         rows[i]["is_miss"]              = is_miss
                         rows[i]["is_correct_rejection"] = is_correct_rejection
+                        rows[i]["reward_points_max"]    = reward_points_max
+                        
+                    
                     if False and not trial_lights_led_off_sent:
                         trial_lights.turnOffLights("inner")
                     if trial_reed._reed_measuring:   trial_reed.stopReedMeasurement()
@@ -3626,7 +4432,7 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     oo_palette.addData('trial_reed.reedFrameStates', trial_reed.reedFrameStates)
                     oo_palette.addData('trial_reed.reedFrameActiveHoles', trial_reed.reedFrameActiveHoles)
                     oo_palette.addData('trial_force.rate', 50)
-                    oo_palette.addData('trial_force.dynamometer', 'both')
+                    oo_palette.addData('trial_force.dynamometer', 'white')
                     oo_palette.addData('trial_force.maxWhiteForce', trial_force.maxWhiteForce)
                     oo_palette.addData('trial_force.maxBlueForce', trial_force.maxBlueForce)
                     if True:
@@ -3676,58 +4482,89 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                 if thisSession is not None:
                     # if running in a Session with a Liaison client, send data up to now
                     thisSession.sendExperimentData()
-                # get names of stimulus parameters
-                if oo_palette.trialList in ([], [None], None):
-                    params = []
-                else:
-                    params = oo_palette.trialList[0].keys()
-                # save data for this loop
-                oo_palette.saveAsExcel(filename + '.xlsx', sheetName='oo_palette',
-                    stimOut=params,
-                    dataOut=['n','all_mean','all_std', 'all_raw'])
                 
                 # --- Prepare to start Routine "rr_rating" ---
                 # create an object to store info about Routine rr_rating
                 rr_rating = data.Routine(
                     name='rr_rating',
-                    components=[rating_dprime_text, rating_physical_text, rating_physical, rating_cognitive_text, rating_cognitive, rating_continue_button],
+                    components=[rating_dprime_text, rating_cognitive_text, rating_cognitive, rating_physical_text, rating_physical, rating_svoce_text, rating_svoce, rating_svope_text, rating_svope, rating_boredom_text, rating_boredom, rating_time_text, rating_time, rating_continue_button],
                 )
                 rr_rating.status = NOT_STARTED
                 continueRoutine = True
                 # update component parameters for each repeat
                 # Run 'Begin Routine' code from rating_code
-                # Mute audio if still running
+                # ===== REWARD POINTS =====
+                cur_physical_reward_level  = cur_trial['physical_reward_level']
+                cur_cognitive_reward_level = cur_trial['cognitive_reward_level']
+                
+                # ===== PERFORMANCE METRICS =====
                 mute_audio()
                 
                 # dprime Calculation
-                H = hits + misses
-                F = false_alarms + correct_rejections
+                N_signal = hits + misses
+                N_noise  = false_alarms + correct_rejections
                 
-                hit_rate = (hits+0.5)/(H+1) if H>0 else 0.5
-                fa_rate = (false_alarms+0.5)/(F+1) if F>0 else 0.5
+                hit_rate = (hits + 0.5)/(N_signal + 1)
+                fa_rate  = (false_alarms + 0.5)/(N_noise + 1)
+                
                 d_prime = norm.ppf(hit_rate) - norm.ppf(fa_rate)
-                
                 currentLoop.addData('d_prime', d_prime)
                 
-                # Write trial-level data
-                for palette_idx in range(cur_num_palettes):
-                    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
-                        rows[i]["hits"]               = hits
-                        rows[i]["false_alarms"]       = false_alarms
-                        rows[i]["misses"]             = misses
-                        rows[i]["correct_rejections"] = correct_rejections
-                        rows[i]["d_prime"]            = d_prime
-                        rows[i]["NRMSE"]              = nrmse
-                        rows[i]["sBias"]              = sbias
-                        rows[i]["pTWTR"]              = ptwtr
+                # --- Performance-based reward calculation ---
+                # Max d' in experiment 
+                d_prime_max = 3.26  
                 
+                # min d' (worst possible performance, all wrong)
+                # Worst-case performance: everything as wrong as possible
+                min_hits               = 0
+                min_misses             = 4
+                min_false_alarms       = 20
+                min_correct_rejections = 0
                 
+                N_signal_min = min_hits + min_misses      # = 4
+                N_noise_min  = min_false_alarms + min_correct_rejections  # = 20
+                
+                hit_rate_min = (min_hits + 0.5) / (N_signal_min + 1)
+                fa_rate_min  = (min_false_alarms + 0.5) / (N_noise_min + 1)
+                
+                d_prime_min = norm.ppf(hit_rate_min) - norm.ppf(fa_rate_min)
+                print(d_prime_min)
+                #d_prime_min_empirical
+                d_prime_min_empirical = -1.52
+                
+                # Lineare Skalierung von d' auf [0,1]
+                scaled_dprime = (d_prime - d_prime_min_empirical) / (d_prime_max - d_prime_min_empirical)
+                
+                # Clipping: keine negativen Werte, nicht über 1
+                scaled_dprime = max(0, min(1, scaled_dprime))
+                
+                # Physical points: proportional to pTWR (0–100)
+                physical_points_earned = cur_physical_reward_level * (ptwtr / 100)
+                
+                # Cognitive points: proportional to d'
+                cognitive_points_earned = cur_cognitive_reward_level * scaled_dprime
+                
+                # Round for display and data storage
+                physical_points_earned = round(physical_points_earned, 2)
+                cognitive_points_earned = round(cognitive_points_earned, 2)
+                
+                # ===== SAVE EARNED POINTS IN CURRENT TRIAL =====
+                cur_trial["physical_points_earned"] = physical_points_earned
+                cur_trial["cognitive_points_earned"] = cognitive_points_earned
+                
+                # ===== REWARD COUNTER =====
+                total_physical_points += physical_points_earned
+                total_cognitive_points += cognitive_points_earned
+                
+                # Add to trial-level data file
+                currentLoop.addData('physical_points_shown', cur_physical_reward_level)
+                currentLoop.addData('cognitive_points_shown', cur_cognitive_reward_level)
+                currentLoop.addData('physical_points_earned', physical_points_earned)
+                currentLoop.addData('cognitive_points_earned', cognitive_points_earned)
+                currentLoop.addData('total_physical_points', total_physical_points)
+                currentLoop.addData('total_cognitive_points', total_cognitive_points)
+                        
                 # ===== DISPLAY SETUP =====
-                # rating_dprime_text.alignText = "left"
-                rating_dprime_text.bold = True
-                rating_physical_text.bold = True
-                rating_cognitive_text.bold = True
-                
                 feedback_display_text = (
                     f"==== PERFORMANCE ====\n"
                     f"d-prime:       {d_prime:+5.2f}\n"
@@ -3739,14 +4576,22 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     f"NRMSE:         {nrmse:5.0f}\n"
                     f"Bias:          {sbias:+5.0f}\n"
                     f"pTWR:          {ptwtr:5.0f}\n"
+                    f"---------------------\n"
+                    f"=== EARNED POINTS ===\n"
+                    f"Physical:     {physical_points_earned:5.2f}\n"
+                    f"Cognitive:    {cognitive_points_earned:5.2f}\n"
+                    f"Total phys:   {total_physical_points:5.2f}\n"
+                    f"Total cogn:   {total_cognitive_points:5.2f}\n"
                     f"====================="
+                    + (f"\n⚠ WARNING: pTWR below 50!" if ptwtr < 50 else "")
                 )
-                
-                # ===== DATA DUMPING =====
-                pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_data.csv', index=False)
                 rating_dprime_text.setText(feedback_display_text)
-                rating_physical.reset()
                 rating_cognitive.reset()
+                rating_physical.reset()
+                rating_svoce.reset()
+                rating_svope.reset()
+                rating_boredom.reset()
+                rating_time.reset()
                 # reset rating_continue_button to account for continued clicks & clear times on/off
                 rating_continue_button.reset()
                 # store start times for rr_rating
@@ -3786,7 +4631,11 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     # Check whether experimenter has entered both ratings
                     is_ratings_complete = (
                         rating_physical.getRating() is not None and
-                        rating_cognitive.getRating() is not None
+                        rating_cognitive.getRating() is not None and
+                        rating_svoce.getRating() is not None and
+                        rating_svope.getRating() is not None and
+                        rating_time.getRating() is not None and
+                        rating_boredom.getRating() is not None 
                     )
                     
                     # *rating_dprime_text* updates
@@ -3806,6 +4655,46 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     
                     # if rating_dprime_text is active this frame...
                     if rating_dprime_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_cognitive_text* updates
+                    
+                    # if rating_cognitive_text is starting this frame...
+                    if rating_cognitive_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_cognitive_text.frameNStart = frameN  # exact frame index
+                        rating_cognitive_text.tStart = t  # local t and not account for scr refresh
+                        rating_cognitive_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_cognitive_text, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_cognitive_text.started')
+                        # update status
+                        rating_cognitive_text.status = STARTED
+                        rating_cognitive_text.setAutoDraw(True)
+                    
+                    # if rating_cognitive_text is active this frame...
+                    if rating_cognitive_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_cognitive* updates
+                    
+                    # if rating_cognitive is starting this frame...
+                    if rating_cognitive.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_cognitive.frameNStart = frameN  # exact frame index
+                        rating_cognitive.tStart = t  # local t and not account for scr refresh
+                        rating_cognitive.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_cognitive, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_cognitive.started')
+                        # update status
+                        rating_cognitive.status = STARTED
+                        rating_cognitive.setAutoDraw(True)
+                    
+                    # if rating_cognitive is active this frame...
+                    if rating_cognitive.status == STARTED:
                         # update params
                         pass
                     
@@ -3849,43 +4738,163 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                         # update params
                         pass
                     
-                    # *rating_cognitive_text* updates
+                    # *rating_svoce_text* updates
                     
-                    # if rating_cognitive_text is starting this frame...
-                    if rating_cognitive_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # if rating_svoce_text is starting this frame...
+                    if rating_svoce_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
                         # keep track of start time/frame for later
-                        rating_cognitive_text.frameNStart = frameN  # exact frame index
-                        rating_cognitive_text.tStart = t  # local t and not account for scr refresh
-                        rating_cognitive_text.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_cognitive_text, 'tStartRefresh')  # time at next scr refresh
+                        rating_svoce_text.frameNStart = frameN  # exact frame index
+                        rating_svoce_text.tStart = t  # local t and not account for scr refresh
+                        rating_svoce_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_svoce_text, 'tStartRefresh')  # time at next scr refresh
                         # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_cognitive_text.started')
+                        thisExp.timestampOnFlip(win, 'rating_svoce_text.started')
                         # update status
-                        rating_cognitive_text.status = STARTED
-                        rating_cognitive_text.setAutoDraw(True)
+                        rating_svoce_text.status = STARTED
+                        rating_svoce_text.setAutoDraw(True)
                     
-                    # if rating_cognitive_text is active this frame...
-                    if rating_cognitive_text.status == STARTED:
+                    # if rating_svoce_text is active this frame...
+                    if rating_svoce_text.status == STARTED:
                         # update params
                         pass
                     
-                    # *rating_cognitive* updates
+                    # *rating_svoce* updates
                     
-                    # if rating_cognitive is starting this frame...
-                    if rating_cognitive.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                    # if rating_svoce is starting this frame...
+                    if rating_svoce.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
                         # keep track of start time/frame for later
-                        rating_cognitive.frameNStart = frameN  # exact frame index
-                        rating_cognitive.tStart = t  # local t and not account for scr refresh
-                        rating_cognitive.tStartRefresh = tThisFlipGlobal  # on global time
-                        win.timeOnFlip(rating_cognitive, 'tStartRefresh')  # time at next scr refresh
+                        rating_svoce.frameNStart = frameN  # exact frame index
+                        rating_svoce.tStart = t  # local t and not account for scr refresh
+                        rating_svoce.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_svoce, 'tStartRefresh')  # time at next scr refresh
                         # add timestamp to datafile
-                        thisExp.timestampOnFlip(win, 'rating_cognitive.started')
+                        thisExp.timestampOnFlip(win, 'rating_svoce.started')
                         # update status
-                        rating_cognitive.status = STARTED
-                        rating_cognitive.setAutoDraw(True)
+                        rating_svoce.status = STARTED
+                        rating_svoce.setAutoDraw(True)
                     
-                    # if rating_cognitive is active this frame...
-                    if rating_cognitive.status == STARTED:
+                    # if rating_svoce is active this frame...
+                    if rating_svoce.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_svope_text* updates
+                    
+                    # if rating_svope_text is starting this frame...
+                    if rating_svope_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_svope_text.frameNStart = frameN  # exact frame index
+                        rating_svope_text.tStart = t  # local t and not account for scr refresh
+                        rating_svope_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_svope_text, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_svope_text.started')
+                        # update status
+                        rating_svope_text.status = STARTED
+                        rating_svope_text.setAutoDraw(True)
+                    
+                    # if rating_svope_text is active this frame...
+                    if rating_svope_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_svope* updates
+                    
+                    # if rating_svope is starting this frame...
+                    if rating_svope.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_svope.frameNStart = frameN  # exact frame index
+                        rating_svope.tStart = t  # local t and not account for scr refresh
+                        rating_svope.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_svope, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_svope.started')
+                        # update status
+                        rating_svope.status = STARTED
+                        rating_svope.setAutoDraw(True)
+                    
+                    # if rating_svope is active this frame...
+                    if rating_svope.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_boredom_text* updates
+                    
+                    # if rating_boredom_text is starting this frame...
+                    if rating_boredom_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_boredom_text.frameNStart = frameN  # exact frame index
+                        rating_boredom_text.tStart = t  # local t and not account for scr refresh
+                        rating_boredom_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_boredom_text, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_boredom_text.started')
+                        # update status
+                        rating_boredom_text.status = STARTED
+                        rating_boredom_text.setAutoDraw(True)
+                    
+                    # if rating_boredom_text is active this frame...
+                    if rating_boredom_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_boredom* updates
+                    
+                    # if rating_boredom is starting this frame...
+                    if rating_boredom.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_boredom.frameNStart = frameN  # exact frame index
+                        rating_boredom.tStart = t  # local t and not account for scr refresh
+                        rating_boredom.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_boredom, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_boredom.started')
+                        # update status
+                        rating_boredom.status = STARTED
+                        rating_boredom.setAutoDraw(True)
+                    
+                    # if rating_boredom is active this frame...
+                    if rating_boredom.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_time_text* updates
+                    
+                    # if rating_time_text is starting this frame...
+                    if rating_time_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_time_text.frameNStart = frameN  # exact frame index
+                        rating_time_text.tStart = t  # local t and not account for scr refresh
+                        rating_time_text.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_time_text, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_time_text.started')
+                        # update status
+                        rating_time_text.status = STARTED
+                        rating_time_text.setAutoDraw(True)
+                    
+                    # if rating_time_text is active this frame...
+                    if rating_time_text.status == STARTED:
+                        # update params
+                        pass
+                    
+                    # *rating_time* updates
+                    
+                    # if rating_time is starting this frame...
+                    if rating_time.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+                        # keep track of start time/frame for later
+                        rating_time.frameNStart = frameN  # exact frame index
+                        rating_time.tStart = t  # local t and not account for scr refresh
+                        rating_time.tStartRefresh = tThisFlipGlobal  # on global time
+                        win.timeOnFlip(rating_time, 'tStartRefresh')  # time at next scr refresh
+                        # add timestamp to datafile
+                        thisExp.timestampOnFlip(win, 'rating_time.started')
+                        # update status
+                        rating_time.status = STARTED
+                        rating_time.setAutoDraw(True)
+                    
+                    # if rating_time is active this frame...
+                    if rating_time.status == STARTED:
                         # update params
                         pass
                     # *rating_continue_button* updates
@@ -3974,10 +4983,47 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
                     for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
                             rows[i]["rpe_cognitive"] = rating_cognitive.getRating()
                             rows[i]["rpe_physical"]  = rating_physical.getRating()
-                oo_level.addData('rating_physical.response', rating_physical.getRating())
-                oo_level.addData('rating_physical.rt', rating_physical.getRT())
+                            rows[i]["rpe_time"]      = rating_time.getRating()
+                            rows[i]["rpe_boredom"]   = rating_boredom.getRating()
+                            rows[i]["rpe_svoce"]     = rating_svoce.getRating()
+                            rows[i]["rpe_svope"]     = rating_svope.getRating()
+                
+                # Write trial-level data into rows[]
+                for palette_idx in range(cur_num_palettes):
+                    for i in palette_row_index[(oo_block.thisN, oo_level.thisN, palette_idx)]:
+                        rows[i]["hits"]               = hits
+                        rows[i]["false_alarms"]       = false_alarms
+                        rows[i]["misses"]             = misses
+                        rows[i]["correct_rejections"] = correct_rejections
+                        rows[i]["d_prime"]            = d_prime
+                        rows[i]["NRMSE"]              = nrmse
+                        rows[i]["sBias"]              = sbias
+                        rows[i]["pTWTR"]              = ptwtr
+                        
+                
+                        # NEW: reward points per palette row
+                        rows[i]["physical_points_shown"]  = cur_physical_reward_level
+                        rows[i]["cognitive_points_shown"] = cur_cognitive_reward_level
+                        rows[i]["physical_points_earned"] = physical_points_earned
+                        rows[i]["cognitive_points_earned"] = cognitive_points_earned
+                        rows[i]["total_physical_points"]  = total_physical_points
+                        rows[i]["total_cognitive_points"] = total_cognitive_points
+                
+                        
+                # ===== DATA DUMPING =====
+                pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_data.csv', index=False)
                 oo_level.addData('rating_cognitive.response', rating_cognitive.getRating())
                 oo_level.addData('rating_cognitive.rt', rating_cognitive.getRT())
+                oo_level.addData('rating_physical.response', rating_physical.getRating())
+                oo_level.addData('rating_physical.rt', rating_physical.getRT())
+                oo_level.addData('rating_svoce.response', rating_svoce.getRating())
+                oo_level.addData('rating_svoce.rt', rating_svoce.getRT())
+                oo_level.addData('rating_svope.response', rating_svope.getRating())
+                oo_level.addData('rating_svope.rt', rating_svope.getRT())
+                oo_level.addData('rating_boredom.response', rating_boredom.getRating())
+                oo_level.addData('rating_boredom.rt', rating_boredom.getRT())
+                oo_level.addData('rating_time.response', rating_time.getRating())
+                oo_level.addData('rating_time.rt', rating_time.getRT())
                 oo_level.addData('rating_continue_button.numClicks', rating_continue_button.numClicks)
                 if rating_continue_button.numClicks:
                    oo_level.addData('rating_continue_button.timesOn', rating_continue_button.timesOn)
@@ -4008,15 +5054,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
             if thisSession is not None:
                 # if running in a Session with a Liaison client, send data up to now
                 thisSession.sendExperimentData()
-            # get names of stimulus parameters
-            if oo_level.trialList in ([], [None], None):
-                params = []
-            else:
-                params = oo_level.trialList[0].keys()
-            # save data for this loop
-            oo_level.saveAsExcel(filename + '.xlsx', sheetName='oo_level',
-                stimOut=params,
-                dataOut=['n','all_mean','all_std', 'all_raw'])
             # mark thisYn_block as finished
             if hasattr(thisYn_block, 'status'):
                 thisYn_block.status = FINISHED
@@ -4038,15 +5075,6 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
         if thisSession is not None:
             # if running in a Session with a Liaison client, send data up to now
             thisSession.sendExperimentData()
-        # get names of stimulus parameters
-        if yn_block.trialList in ([], [None], None):
-            params = []
-        else:
-            params = yn_block.trialList[0].keys()
-        # save data for this loop
-        yn_block.saveAsExcel(filename + '.xlsx', sheetName='yn_block',
-            stimOut=params,
-            dataOut=['n','all_mean','all_std', 'all_raw'])
         # mark thisOo_block as finished
         if hasattr(thisOo_block, 'status'):
             thisOo_block.status = FINISHED
@@ -4068,15 +5096,201 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     if thisSession is not None:
         # if running in a Session with a Liaison client, send data up to now
         thisSession.sendExperimentData()
-    # get names of stimulus parameters
-    if oo_block.trialList in ([], [None], None):
-        params = []
+    
+    # --- Prepare to start Routine "rr_points" ---
+    # create an object to store info about Routine rr_points
+    rr_points = data.Routine(
+        name='rr_points',
+        components=[points_display_text],
+    )
+    rr_points.status = NOT_STARTED
+    continueRoutine = True
+    # update component parameters for each repeat
+    # Run 'Begin Routine' code from points_code
+    # =============================================================================
+    # CALCULATE EARNED POINTS FROM SELECTED TRIALS (USING physical_points_earned)
+    # =============================================================================
+    for _, row in selected_df.iterrows():
+    
+        # Globale Blocknummer für den Merge
+        block = int(row["block"])
+    
+        # Interne Block-ID für den Zugriff auf main_blocks
+        main_block_id = int(row["main_block_id"])
+        trial_idx = int(row["trial_idx"])
+    
+        trial = main_blocks[main_block_id][trial_idx]
+    
+        physical_points_selected += trial.get(
+            "physical_points_earned", 0
+        )
+        cognitive_points_selected += trial.get(
+            "cognitive_points_earned", 0
+        )
+        
+    # Gesamtpunkte der drei ausgewählten Trials
+    total_points_selected = (
+        physical_points_selected + cognitive_points_selected
+    )
+    
+    # Auszahlung berechnen
+    received_money = point_value * total_points_selected
+    
+    # Werte in den PsychoPy-Datensatz schreiben
+    thisExp.addData('physical_points_selected', physical_points_selected)
+    thisExp.addData('cognitive_points_selected', cognitive_points_selected)
+    thisExp.addData('total_points_selected', total_points_selected)
+    thisExp.addData('received_money', received_money)
+    
+    # =============================================================================
+    # DISPLAY SETUP
+    # =============================================================================
+    
+    
+    points_display_string = (
+        f"==== POINTS ====\n"
+        f"Selected Trials:       {len(selected_df)}\n"
+        f"Cognitive points:      {cognitive_points_selected:5.2f}\n"
+        f"Physical points:       {physical_points_selected:5.2f}\n"
+        f"Total points:          {total_points_selected:5.2f}\n"
+        f"Received money:        {received_money:5.2f} €\n"
+        f"====================="
+    )
+    
+    # Text im bestehenden PsychoPy-Textobjekt aktualisieren
+    points_display_text.setText(points_display_string)
+    # store start times for rr_points
+    rr_points.tStartRefresh = win.getFutureFlipTime(clock=globalClock)
+    rr_points.tStart = globalClock.getTime(format='float')
+    rr_points.status = STARTED
+    thisExp.addData('rr_points.started', rr_points.tStart)
+    rr_points.maxDuration = None
+    # keep track of which components have finished
+    rr_pointsComponents = rr_points.components
+    for thisComponent in rr_points.components:
+        thisComponent.tStart = None
+        thisComponent.tStop = None
+        thisComponent.tStartRefresh = None
+        thisComponent.tStopRefresh = None
+        if hasattr(thisComponent, 'status'):
+            thisComponent.status = NOT_STARTED
+    # reset timers
+    t = 0
+    _timeToFirstFrame = win.getFutureFlipTime(clock="now")
+    frameN = -1
+    
+    # --- Run Routine "rr_points" ---
+    thisExp.currentRoutine = rr_points
+    rr_points.forceEnded = routineForceEnded = not continueRoutine
+    while continueRoutine and routineTimer.getTime() < 10.0:
+        # get current time
+        t = routineTimer.getTime()
+        tThisFlip = win.getFutureFlipTime(clock=routineTimer)
+        tThisFlipGlobal = win.getFutureFlipTime(clock=None)
+        frameN = frameN + 1  # number of completed frames (so 0 is the first frame)
+        # update/draw components on each frame
+        
+        # *points_display_text* updates
+        
+        # if points_display_text is starting this frame...
+        if points_display_text.status == NOT_STARTED and tThisFlip >= 0.0-frameTolerance:
+            # keep track of start time/frame for later
+            points_display_text.frameNStart = frameN  # exact frame index
+            points_display_text.tStart = t  # local t and not account for scr refresh
+            points_display_text.tStartRefresh = tThisFlipGlobal  # on global time
+            win.timeOnFlip(points_display_text, 'tStartRefresh')  # time at next scr refresh
+            # add timestamp to datafile
+            thisExp.timestampOnFlip(win, 'points_display_text.started')
+            # update status
+            points_display_text.status = STARTED
+            points_display_text.setAutoDraw(True)
+        
+        # if points_display_text is active this frame...
+        if points_display_text.status == STARTED:
+            # update params
+            points_display_text.setText(points_display_string
+            , log=False)
+        
+        # if points_display_text is stopping this frame...
+        if points_display_text.status == STARTED:
+            # is it time to stop? (based on global clock, using actual start)
+            if tThisFlipGlobal > points_display_text.tStartRefresh + 10-frameTolerance:
+                # keep track of stop time/frame for later
+                points_display_text.tStop = t  # not accounting for scr refresh
+                points_display_text.tStopRefresh = tThisFlipGlobal  # on global time
+                points_display_text.frameNStop = frameN  # exact frame index
+                # add timestamp to datafile
+                thisExp.timestampOnFlip(win, 'points_display_text.stopped')
+                # update status
+                points_display_text.status = FINISHED
+                points_display_text.setAutoDraw(False)
+        
+        # check for quit (typically the Esc key)
+        if defaultKeyboard.getKeys(keyList=["escape"]):
+            thisExp.status = FINISHED
+        if thisExp.status == FINISHED or endExpNow:
+            endExperiment(thisExp, win=win)
+            return
+        # pause experiment here if requested
+        if thisExp.status == PAUSED:
+            pauseExperiment(
+                thisExp=thisExp, 
+                win=win, 
+                timers=[routineTimer, globalClock], 
+                currentRoutine=rr_points,
+            )
+            # skip the frame we paused on
+            continue
+        
+        # has a Component requested the Routine to end?
+        if not continueRoutine:
+            rr_points.forceEnded = routineForceEnded = True
+        # has the Routine been forcibly ended?
+        if rr_points.forceEnded or routineForceEnded:
+            break
+        # has every Component finished?
+        continueRoutine = False
+        for thisComponent in rr_points.components:
+            if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
+                continueRoutine = True
+                break  # at least one component has not yet finished
+        
+        # refresh the screen
+        if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+            win.flip()
+    
+    # --- Ending Routine "rr_points" ---
+    for thisComponent in rr_points.components:
+        if hasattr(thisComponent, "setAutoDraw"):
+            thisComponent.setAutoDraw(False)
+    # store stop times for rr_points
+    rr_points.tStop = globalClock.getTime(format='float')
+    rr_points.tStopRefresh = tThisFlipGlobal
+    thisExp.addData('rr_points.stopped', rr_points.tStop)
+    # Run 'End Routine' code from points_code
+    # save money in output file
+    thisExp.addData('received_money', received_money)
+    
+    # ===== SAVE FINAL POINTS IN ALL MAIN-PHASE ROWS =====
+    for row in rows:
+        if row.get("phase") == "main":
+    
+            row["physical_points_selected"] = physical_points_selected
+            row["cognitive_points_selected"] = cognitive_points_selected
+            row["total_points_selected"] = total_points_selected
+            row["received_money"] = received_money
+    
+    # ===== FINAL DATA DUMP =====
+    pd.DataFrame(rows).to_csv(thisExp.dataFileName + '_data.csv', index=False) 
+    
+    # using non-slip timing so subtract the expected duration of this Routine (unless ended on request)
+    if rr_points.maxDurationReached:
+        routineTimer.addTime(-rr_points.maxDuration)
+    elif rr_points.forceEnded:
+        routineTimer.reset()
     else:
-        params = oo_block.trialList[0].keys()
-    # save data for this loop
-    oo_block.saveAsExcel(filename + '.xlsx', sheetName='oo_block',
-        stimOut=params,
-        dataOut=['n','all_mean','all_std', 'all_raw'])
+        routineTimer.addTime(-10.000000)
+    thisExp.nextEntry()
     
     # --- Prepare to start Routine "rr_finish" ---
     # create an object to store info about Routine rr_finish
@@ -4204,27 +5418,31 @@ def run(expInfo, thisExp, win, globalClock=None, thisSession=None):
     thisExp.nextEntry()
     if True and maxforce_force_raw_buffer:
         _raw_path = thisExp.dataFileName + '_force_long.tsv'
-        with open(_raw_path, 'w', encoding='utf-8') as _f:
-            _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
+        _write_header = not os.path.exists(_raw_path)
+        with open(_raw_path, 'a', encoding='utf-8') as _f:
+            if _write_header:
+                _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
             for _row in maxforce_force_raw_buffer:
                 _f.write('\t'.join(str(_row[_k]) for _k in ['participant','session','routine','component','trial_index','trial_name','identifier','sample_index','white_time','blue_time','time','white_force','blue_force','white_force_raw_counts','blue_force_raw_counts']) + '\n')
     if True and target_force_raw_buffer:
         _raw_path = thisExp.dataFileName + '_force_long.tsv'
-        with open(_raw_path, 'w', encoding='utf-8') as _f:
-            _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
+        _write_header = not os.path.exists(_raw_path)
+        with open(_raw_path, 'a', encoding='utf-8') as _f:
+            if _write_header:
+                _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
             for _row in target_force_raw_buffer:
                 _f.write('\t'.join(str(_row[_k]) for _k in ['participant','session','routine','component','trial_index','trial_name','identifier','sample_index','white_time','blue_time','time','white_force','blue_force','white_force_raw_counts','blue_force_raw_counts']) + '\n')
     if True and trial_force_raw_buffer:
         _raw_path = thisExp.dataFileName + '_force_long.tsv'
-        with open(_raw_path, 'w', encoding='utf-8') as _f:
-            _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
+        _write_header = not os.path.exists(_raw_path)
+        with open(_raw_path, 'a', encoding='utf-8') as _f:
+            if _write_header:
+                _f.write('participant\tsession\troutine\tcomponent\ttrial_index\ttrial_name\tidentifier\tsample_index\twhite_time\tblue_time\ttime\twhite_force\tblue_force\twhite_force_raw_counts\tblue_force_raw_counts\n')
             for _row in trial_force_raw_buffer:
                 _f.write('\t'.join(str(_row[_k]) for _k in ['participant','session','routine','component','trial_index','trial_name','identifier','sample_index','white_time','blue_time','time','white_force','blue_force','white_force_raw_counts','blue_force_raw_counts']) + '\n')
     
     # mark experiment as finished
     endExperiment(thisExp, win=win)
-    # end 'rush' mode
-    core.rush(enable=False)
 
 
 def saveData(thisExp):
